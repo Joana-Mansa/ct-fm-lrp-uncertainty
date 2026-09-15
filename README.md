@@ -198,7 +198,27 @@ real question, and it is not settled by either metric here.
 
 ![attribution panel](docs/figures/attribution_panel.png)
 
-### 4.4 Uncertainty against faithfulness
+### 4.4 Inference on a single volume
+
+`src/infer.py` runs prediction, uncertainty and attribution together on one
+volume, because none of the three is enough alone. A prediction without an
+uncertainty is a number with no error bar. An uncertainty without an explanation
+says the model is unsure but not where. An explanation without either invites
+trust in a heatmap for a call the model was never confident about.
+
+![inference example](docs/figures/inference_example.png)
+
+```
+volume 3: truth benign, predicted benign at p=0.997
+  predictive entropy 0.0252, mutual information 0.0005
+  spread over 30 dropout passes: 0.0022
+```
+
+Mutual information near zero with low total entropy means the dropout members
+agree with each other, so what little uncertainty there is comes from the data
+rather than from disagreement inside the model.
+
+### 4.5 Uncertainty against faithfulness
 
 ![uncertainty vs faithfulness](docs/figures/uncertainty_vs_faithfulness.png)
 

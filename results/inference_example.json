@@ -1,0 +1,21 @@
+{
+  "index": 3,
+  "ground_truth": "benign",
+  "prediction": "benign",
+  "correct": true,
+  "probabilities": {
+    "benign": 0.9967359900474548,
+    "malignant": 0.003263958729803562
+  },
+  "mc_dropout": {
+    "passes": 30,
+    "mean_probabilities": {
+      "benign": 0.9961607456207275,
+      "malignant": 0.003839225275442004
+    },
+    "predictive_entropy": 0.025187507271766663,
+    "mutual_information": 0.000514018535614013,
+    "max_std_over_passes": 0.0022237563971430063
+  },
+  "attribution_method": "epsilon_plus_flat"
+}
