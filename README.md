@@ -205,7 +205,31 @@ Mutual information near zero with low total entropy indicates agreement between
 dropout samples, so the residual uncertainty is attributable to the data rather
 than to disagreement within the model.
 
-### 4.5 Uncertainty against faithfulness
+### 4.5 Deep ensemble against MC dropout
+
+Each full-label run saves a tagged checkpoint, so the seed replicates that
+produce the error bands in Section 4.1 also serve as ensemble members. Four
+independently trained models were available.
+
+![ensemble](docs/figures/ensemble.png)
+
+| Estimator | AUC | ECE | Mean entropy | Mean MI | MI share of entropy |
+|---|---|---|---|---|---|
+| Best single member | 0.9111 | | | | |
+| MC dropout, one model, 20 passes | 0.8960 | 0.1265 | 0.1254 | 0.0030 | 0.024 |
+| Deep ensemble, 4 members | 0.9085 | 0.0505 | 0.3256 | 0.1724 | 0.530 |
+
+Per-member test AUC: 0.8951, 0.9093, 0.9111, 0.8805.
+
+The ensemble reduces expected calibration error from 0.1265 to 0.0505 at
+comparable AUC. The two estimators also differ in what they attribute the
+uncertainty to. Under MC dropout, mutual information accounts for 2.4% of
+predictive entropy, so almost all of the reported uncertainty is assigned to
+ambiguity in the data. Under the ensemble it accounts for 53.0%, indicating
+substantial disagreement between independently trained models that dropout
+sampling on a single set of weights does not expose.
+
+### 4.6 Uncertainty against faithfulness
 
 ![uncertainty vs faithfulness](docs/figures/uncertainty_vs_faithfulness.png)
 
@@ -301,9 +325,10 @@ conclusion in Section 4.3.
 **Resolution.** Inputs are 64^3 patches. CT-FM was pretrained on whole scans, so
 the representation may not be used as intended at this scale.
 
-**Uncertainty method.** Section 4.2 and 4.5 use MC dropout. Deep ensembles are
-implemented in `src/ensemble.py` and use the tagged checkpoints from the seed
-replicates.
+**Ensemble size.** The deep ensemble in Section 4.5 has four members, which is
+at the low end for stable uncertainty estimates. The members also share a
+pretrained initialisation, so their diversity comes from data ordering,
+subsampling and dropout, not from independent pretraining.
 
 ---
 

@@ -1,0 +1,30 @@
+{
+  "members": [
+    "ctfm_pretrained.pt",
+    "ctfm_pretrained_ens10.pt",
+    "ctfm_pretrained_seed1.pt",
+    "ctfm_pretrained_seed2.pt"
+  ],
+  "n_members": 4,
+  "per_member_auc": {
+    "ctfm_pretrained.pt": 0.8950711382113821,
+    "ctfm_pretrained_ens10.pt": 0.9092987804878049,
+    "ctfm_pretrained_seed1.pt": 0.9111407520325203,
+    "ctfm_pretrained_seed2.pt": 0.8804623983739838
+  },
+  "ensemble": {
+    "auc": 0.908473069105691,
+    "ece": 0.05045759774023487,
+    "mean_entropy": 0.32563111186027527,
+    "mean_mutual_information": 0.17244625091552734,
+    "mi_share_of_entropy": 0.5295754671096802
+  },
+  "mc_dropout_single_model": {
+    "passes": 20,
+    "auc": 0.8959603658536586,
+    "ece": 0.12647994833607826,
+    "mean_entropy": 0.12537492154294722,
+    "mean_mutual_information": 0.003030715317063661,
+    "mi_share_of_entropy": 0.024173218054820388
+  }
+}
