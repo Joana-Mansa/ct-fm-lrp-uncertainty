@@ -221,8 +221,8 @@ volume 3: truth benign, predicted benign at p=0.997
 ```
 
 Mutual information near zero with low total entropy indicates agreement between
-dropout samples, so the residual uncertainty is attributable to the data rather
-than to disagreement within the model.
+dropout samples. The residual uncertainty is therefore attributable to ambiguity
+in the data.
 
 ### 4.5 Deep ensemble against MC dropout
 

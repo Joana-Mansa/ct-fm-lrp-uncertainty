@@ -322,8 +322,9 @@ segmentation by Salahuddin et al.~\cite{salahuddin2024renal}.
 The ablation uses three paired seeds. The mean gain is smaller than the
 between-seed spread at 10\% and 100\% of labels, so the effect size is not
 resolved. The explanation analysis covers 64
-volumes, which is sufficient to show that the deletion metric does not
-discriminate but not to resolve a weak correlation. The deletion baseline
+volumes. This suffices to show that the deletion metric fails to discriminate
+between methods. Resolving the weak correlation between uncertainty and
+faithfulness would require a larger sample. The deletion baseline
 replaces voxels with the dataset mean; a blurred or inpainted baseline would
 remain nearer the data distribution and may change the conclusion of
 Section~III-C. Inputs are $64^3$ patches. A model pretrained on complete scans
