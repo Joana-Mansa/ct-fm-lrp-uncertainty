@@ -39,9 +39,12 @@ replaced voxels uniformly through the volume and moves the input away from the
 training distribution, whereas attribution-guided deletion removes a compact
 contiguous region. Under mean-value masking the baseline therefore benefits from
 distribution shift. Perturbation stability does separate the methods, with
-Grad-CAM at 0.924 and the LRP composites between $-0.015$ and 0.220. We conclude
-that deletion protocols require manifold-preserving masking before they can rank
-attribution methods on volumetric medical data.
+Grad-CAM at 0.924 and the LRP composites between $-0.015$ and 0.220. A
+four-member deep ensemble reduces expected calibration error from 0.127 to 0.051
+relative to MC dropout and attributes 53\% of predictive entropy to model
+disagreement against 2.4\% for dropout. We conclude that deletion protocols
+require manifold-preserving masking before they can rank attribution methods on
+volumetric medical data.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -248,6 +251,44 @@ preferable.
 \label{fig:panel}
 \end{figure}
 
+\subsection{Deep ensemble against MC dropout}
+
+Each full-label run stores a tagged checkpoint, so the seed replicates used for
+Section~III-A also serve as ensemble members. Four independently trained models
+were available, with individual test AUC 0.8951, 0.9093, 0.9111 and 0.8805.
+
+\begin{table}[t]
+\caption{Uncertainty estimators on the test split}
+\label{tab:ens}
+\centering
+\footnotesize
+\begin{tabular}{lcccc}
+\toprule
+Estimator & AUC & ECE & Entropy & MI share \\
+\midrule
+Best single member       & 0.9111 & --     & --     & -- \\
+MC dropout, 20 passes    & 0.8960 & 0.1265 & 0.1254 & 0.024 \\
+Deep ensemble, 4 members & 0.9085 & \textbf{0.0505} & 0.3256 & \textbf{0.530} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centerline{\includegraphics[width=\columnwidth]{../docs/figures/ensemble.png}}
+\caption{Calibration error, the share of predictive entropy attributable to
+model disagreement, and the entropy distribution, for MC dropout against a
+four-member deep ensemble.}
+\label{fig:ens}
+\end{figure}
+
+The ensemble reduces expected calibration error from 0.1265 to 0.0505 at
+comparable AUC (Table~\ref{tab:ens}, Fig.~\ref{fig:ens}). The two estimators
+differ in how they apportion the uncertainty. Under MC dropout, mutual
+information accounts for 2.4\% of predictive entropy, assigning almost all
+reported uncertainty to ambiguity in the data. Under the ensemble it accounts
+for 53.0\%, indicating disagreement between independently trained models that
+dropout sampling on a single parameter set does not expose.
+
 \subsection{Uncertainty against faithfulness}
 
 \begin{figure}[t]
@@ -273,8 +314,10 @@ discriminate but not to resolve a weak correlation. The deletion baseline
 replaces voxels with the dataset mean; a blurred or inpainted baseline would
 remain nearer the data distribution and may change the conclusion of
 Section~III-C. Inputs are $64^3$ patches, not whole chest CT, so a model
-pretrained on complete scans may not be used as intended. The uncertainty
-results use MC dropout.
+pretrained on complete scans may not be used as intended. The deep ensemble has
+four members, which is at the low end for stable uncertainty estimates, and its
+members share a pretrained initialisation, so their diversity arises from data
+ordering, subsampling and dropout only.
 
 \section{Conclusion}
 
