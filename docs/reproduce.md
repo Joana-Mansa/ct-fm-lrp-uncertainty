@@ -77,3 +77,11 @@ python scripts/architecture_figures.py
 ```
 
 This needs only NumPy and Matplotlib. It writes SVG and PNG diagrams plus learning curves under `docs/figures/`. The curves read saved JSON histories; no model training runs. Layer shapes and parameter counts are recorded in [`results/architecture.json`](../results/architecture.json).
+
+## Render the saved Grad-CAM and Zennit maps
+
+```bash
+python scripts/attribution_figures.py
+```
+
+This uses NumPy and Matplotlib only. It verifies the saved array hash and labels against `results/attribution_examples.json`, then writes the two-case README preview and four-case gallery. It does not train a model or generate new attribution values. The main `src/figures.py` command uses the same renderer.

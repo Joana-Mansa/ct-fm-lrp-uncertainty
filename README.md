@@ -6,6 +6,16 @@ Does a pretrained CT encoder help with limited labels, and what can its attribut
 
 [📊 Results](docs/results.md) · [▶ Run it](docs/reproduce.md) · [🔍 Verification](docs/verification.md) · [Technical report](paper/ctfm_lrp_uncertainty.pdf)
 
+## Attribution maps: Grad-CAM and Zennit LRP
+
+![Real CT inputs beside Grad-CAM and all three Zennit LRP composite maps, with test IDs, labels and predictions](docs/figures/attribution_preview.png)
+
+**Read left to right:** the CT input, Grad-CAM, EpsilonPlusFlat, EpsilonGammaBox and EpsilonAlpha2Beta1. These are saved model outputs for test cases **257 and 180**, the first two cases of the original analysis subset. All columns show the same slice and explain the predicted class. Label 0 means lower malignancy ratings; label 1 means higher ratings.
+
+**Colours:** brighter colours indicate higher values within each normalised map. Each method/volume was scaled separately, so colour intensity cannot compare absolute importance across methods or distinguish positive from negative evidence. These exploratory maps are not segmentation masks or validated clinical explanations.
+
+[Four-case gallery and how to interpret the maps](docs/attribution.md) · [Saved arrays](results/qualitative.npz) · [Verified example identities](results/attribution_examples.json)
+
 ## What does the data look like?
 
 ![Two real nodule patches, each shown along three array axes](docs/figures/data_samples.png)

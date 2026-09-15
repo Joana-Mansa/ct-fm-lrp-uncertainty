@@ -125,31 +125,9 @@ def fig_uncertainty_vs_faithfulness():
 
 
 def fig_qualitative():
-    p = RESULTS / "qualitative.npz"
-    if not p.exists():
-        return
-    z = np.load(p)
-    vol = z["volume"][:, 0]
-    methods = [m for m in NAMES if m in z]
-    n = min(3, len(vol))
-    rows = 1 + len(methods)
-    fig, axes = plt.subplots(rows, n, figsize=(2.1 * n, 2.0 * rows), squeeze=False)
-    mid = vol.shape[1] // 2
-    for j in range(n):
-        axes[0][j].imshow(vol[j, mid], cmap="gray")
-        axes[0][j].set_title(f"label {z['label'][j]}  pred {z['pred'][j]}", fontsize=7)
-        for i, m in enumerate(methods):
-            axes[i + 1][j].imshow(vol[j, mid], cmap="gray")
-            axes[i + 1][j].imshow(z[m][j, mid], cmap="jet", alpha=0.45)
-    for i, lab in enumerate(["CT slice"] + [NAMES[m] for m in methods]):
-        axes[i][0].set_ylabel(lab, fontsize=7)
-    for ax in axes.flat:
-        ax.set_xticks([])
-        ax.set_yticks([])
-    fig.suptitle("Attribution on the central axial slice", fontsize=9)
-    plt.tight_layout()
-    plt.savefig(FIGS / "attribution_panel.png")
-    plt.close()
+    """Use the shared, provenance-checked renderer for the README and gallery."""
+    import runpy
+    runpy.run_path(str(ROOT / "scripts" / "attribution_figures.py"), run_name="__main__")
 
 
 def fig_calibration():

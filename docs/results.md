@@ -39,6 +39,11 @@ AUC measures ranking, while accuracy uses a decision threshold. The pretrained s
 
 ## Attribution and perturbation metrics
 
+![CT inputs, Grad-CAM and three Zennit attribution maps](figures/attribution_preview.png)
+
+[Full visual comparison, colour scale and misclassified example](attribution.md). These saved maps show the predicted-class attribution on the same CT slice.
+
+
 The original analysis uses 64 test patches; stability uses only its first 16. Random masking is a comparator, not an attribution method. Lower deletion AUC and higher AOPC indicate a larger confidence drop under this particular masking procedure.
 
 | Method | Deletion AUC | Insertion AUC | AOPC | AOPC minus random | Stability (n=16) |

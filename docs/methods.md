@@ -14,6 +14,8 @@ At each label budget, both arms use the same stratified subset for a given seed:
 
 ## Attribution
 
+[View Grad-CAM and all three Zennit maps alongside their CT inputs](attribution.md).
+
 Three Zennit composites (`EpsilonPlusFlat`, `EpsilonGammaBox`, `EpsilonAlpha2Beta1`) and bottleneck Grad-CAM are applied to the predicted class. Grad-CAM is computed on a 4³ map and interpolated to 64³, so smoothness is expected.
 
 **Implementation status:** the Zennit-composite maps are exploratory. This architecture contains residual additions, BatchNorm3d and LayerNorm, and no architecture-specific canonizer or full relevance-conservation validation is supplied. Two-case checks confirm finite maps of the expected shape, but their sums are not evidence of conservation. Consequently these results do not establish a general failure or success of LRP. See the [Zennit canonizer documentation](https://zennit.readthedocs.io/en/stable/how-to/use-rules-composites-and-canonizers.html).

@@ -1,0 +1,46 @@
+{
+  "source": "results/qualitative.npz",
+  "sha256": "4fbfa09242ad8f4486d940406b2f58495d6902d95637948cf402b23fc12e29ae",
+  "selection": "first four of the original 64-case test subset, NumPy default_rng(0), without replacement",
+  "test_indices": [
+    257,
+    180,
+    212,
+    114
+  ],
+  "labels": [
+    0,
+    1,
+    0,
+    0
+  ],
+  "predictions": [
+    0,
+    1,
+    0,
+    0
+  ],
+  "checkpoint_probabilities": [
+    [
+      0.9997619986534119,
+      0.00023798127949703485
+    ],
+    [
+      0.0005395076586864889,
+      0.9994605183601379
+    ],
+    [
+      0.9982653260231018,
+      0.0017347257817164063
+    ],
+    [
+      0.9922420978546143,
+      0.007757981773465872
+    ]
+  ],
+  "exact_benchmark_images_match": true,
+  "predictions_match_checkpoint_audit": true,
+  "display_axis": 0,
+  "slice_index": 32,
+  "maps": "original saved per-volume min-max normalised maps, not newly generated attributions"
+}
