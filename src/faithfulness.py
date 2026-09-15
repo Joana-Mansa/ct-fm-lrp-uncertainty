@@ -90,9 +90,13 @@ def summarise(curve):
     return {"auc": auc, "aopc": aopc}
 
 
-@torch.no_grad()
 def stability(model, x, target, attribute_fn, sigma=0.05, repeats=3):
     """How much the attribution moves when the input is slightly perturbed.
+
+    This one is deliberately not wrapped in `torch.no_grad`. It calls an
+    attribution method, and layer-wise relevance propagation is implemented as
+    gradient hooks, so disabling gradients here stops zennit registering them
+    and the call fails rather than returning a wrong number.
 
     Reported as the mean correlation between the map on the clean input and the
     map on a noisy copy. An explanation that changes completely under noise the
