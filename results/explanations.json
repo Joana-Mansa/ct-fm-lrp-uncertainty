@@ -1,0 +1,100 @@
+{
+  "n_analysed": 64,
+  "deletion_steps": 20,
+  "mc_passes": 20,
+  "faithfulness": {
+    "random_baseline": {
+      "deletion_auc": 0.58698570728302,
+      "aopc": 0.3678693175315857
+    },
+    "epsilon_plus_flat": {
+      "deletion_auc": 0.8193355798721313,
+      "insertion_auc": 0.9718364477157593,
+      "aopc": 0.14658376574516296,
+      "aopc_over_random": -0.22128555178642273,
+      "uncertainty_vs_aopc_spearman": 0.19038461538461537
+    },
+    "epsilon_gamma_box": {
+      "deletion_auc": 0.8224352598190308,
+      "insertion_auc": 0.9718883633613586,
+      "aopc": 0.14363166689872742,
+      "aopc_over_random": -0.22423765063285828,
+      "uncertainty_vs_aopc_spearman": 0.17394688644688644
+    },
+    "epsilon_alpha2_beta1": {
+      "deletion_auc": 0.8163892030715942,
+      "insertion_auc": 0.9733302593231201,
+      "aopc": 0.14938980340957642,
+      "aopc_over_random": -0.21847951412200928,
+      "uncertainty_vs_aopc_spearman": 0.22138278388278387
+    },
+    "gradcam": {
+      "deletion_auc": 0.7121354937553406,
+      "insertion_auc": 0.9735829830169678,
+      "aopc": 0.24867907166481018,
+      "aopc_over_random": -0.11919024586677551,
+      "uncertainty_vs_aopc_spearman": -0.124496336996337
+    }
+  },
+  "stability_corr": {
+    "epsilon_plus_flat": 0.012385711073875427,
+    "epsilon_gamma_box": -0.01464522909373045,
+    "epsilon_alpha2_beta1": 0.2201399803161621,
+    "gradcam": 0.9235272407531738
+  },
+  "calibration": {
+    "ece": 0.14528072159737349,
+    "bins": [
+      {
+        "bin": [
+          0.5,
+          0.6000000000000001
+        ],
+        "n": 1,
+        "accuracy": 1.0,
+        "confidence": 0.5175283551216125
+      },
+      {
+        "bin": [
+          0.6000000000000001,
+          0.7000000000000001
+        ],
+        "n": 2,
+        "accuracy": 0.5,
+        "confidence": 0.6601204872131348
+      },
+      {
+        "bin": [
+          0.7000000000000001,
+          0.8
+        ],
+        "n": 2,
+        "accuracy": 1.0,
+        "confidence": 0.7694078683853149
+      },
+      {
+        "bin": [
+          0.8,
+          0.9
+        ],
+        "n": 2,
+        "accuracy": 1.0,
+        "confidence": 0.8406455516815186
+      },
+      {
+        "bin": [
+          0.9,
+          1.0
+        ],
+        "n": 57,
+        "accuracy": 0.8596491228070176,
+        "confidence": 0.9950063228607178
+      }
+    ]
+  },
+  "uncertainty": {
+    "entropy_mean": 0.08448293589890454,
+    "entropy_median": 0.007962109288200736,
+    "mutual_information_mean": 0.0022001597591497562
+  }
+}
