@@ -11,8 +11,8 @@
 
 \begin{document}
 
-\title{When the Faithfulness Metric Fails Before the Explanation Does:\\
-Layer-wise Relevance Propagation on a Self-Supervised CT Foundation Model}
+\title{Deletion-Based Faithfulness Metrics Do Not Discriminate\\
+Between Attribution Methods on Volumetric CT}
 
 \author{\IEEEauthorblockN{Joana Owusu-Appiah}
 \IEEEauthorblockA{\textit{Erasmus Mundus MSc Medical Imaging and Applications (MAIA)} \\
@@ -22,27 +22,26 @@ owusuappiahjoana59@gmail.com}}
 \maketitle
 
 \begin{abstract}
-Attribution maps make a testable claim: the voxels they rank highest are the
-ones the model used. Deletion metrics test that claim by masking top-ranked
-voxels and watching the prediction fall. We apply this protocol to a
-self-supervised CT foundation model, CT-FM, fine-tuned for lung-nodule
-malignancy on volumetric chest CT, comparing three layer-wise relevance
-propagation composites against Grad-CAM. Two findings follow. First, the
-pretraining is worth having: CT-FM initialisation improves test AUC over an
-architecturally identical randomly-initialised network at every label budget,
-reaching 0.895 against 0.873 at full supervision, though a seed replicate shows
-the smallest gain lies within seed noise. Second, and more consequentially,
-\emph{no attribution method outperformed a random-order deletion baseline}. All
-four scored worse, by 0.12 to 0.22 AOPC. We trace this to the baseline rather
-than the explanations: random deletion scatters replaced voxels throughout the
-volume and drives the input off the data manifold, whereas attribution-guided
-deletion removes a compact contiguous region that remains far more plausible as
-a scan. The random baseline wins by breaking the image, not by locating evidence
-better. We report this as a failure of the metric under volumetric masking,
-quantify the separation the methods do show under perturbation stability, where
-Grad-CAM reaches 0.924 and LRP 0.012 to 0.220, and argue that deletion protocols
-require manifold-preserving masking before they can adjudicate explanation
-quality in 3D medical imaging.
+Attribution maps assert that the voxels they rank highest are those a model
+responded to. Deletion metrics test this by masking top-ranked voxels and
+recording the change in predicted probability. We apply the protocol to CT-FM,
+a SegResNet pretrained by contrastive self-supervised learning on 148{,}000 CT
+scans, fine-tuned for lung-nodule malignancy classification on volumetric chest
+CT, and compare three layer-wise relevance propagation composites against
+Grad-CAM. Two results are reported. First, CT-FM initialisation improves test
+AUC over an architecturally identical randomly-initialised control at every
+label budget, reaching 0.895 against 0.873 at full supervision; across three
+seeds the mean gain is positive at each budget with overlapping ranges at 10\%
+and 25\% of labels. Second, none of the four attribution methods achieved a
+lower deletion AUC than a random-order baseline, scoring 0.12 to 0.22 lower on
+AOPC. We attribute this to the masking scheme: random deletion distributes
+replaced voxels uniformly through the volume and moves the input away from the
+training distribution, whereas attribution-guided deletion removes a compact
+contiguous region. Under mean-value masking the baseline therefore benefits from
+distribution shift. Perturbation stability does separate the methods, with
+Grad-CAM at 0.924 and the LRP composites between $-0.015$ and 0.220. We conclude
+that deletion protocols require manifold-preserving masking before they can rank
+attribution methods on volumetric medical data.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -52,11 +51,11 @@ self-supervised learning, uncertainty estimation, computed tomography
 
 \section{Introduction}
 
-Two claims are commonly made in medical imaging papers and rarely tested
-together. The first is that self-supervised pretraining on large unlabelled
-image collections improves downstream performance. The second is that a
-published attribution map explains the resulting model. Both are checkable, and
-checking them is the subject of this paper.
+Two claims are common in the medical imaging literature. The first is that
+self-supervised pretraining on large unlabelled image collections improves
+downstream performance. The second is that a published attribution map describes
+what the resulting model responded to. This paper evaluates both on a single
+task.
 
 We fine-tune CT-FM \cite{pai2025ctfm}, a SegResNet pretrained by contrastive
 self-supervised learning on 148{,}000 CT scans, for benign-versus-malignant
@@ -64,8 +63,7 @@ lung-nodule classification on volumetric chest CT. We then explain it with
 layer-wise relevance propagation (LRP) \cite{bach2015lrp} implemented in zennit
 \cite{anders2021zennit}, whose layer-type registry covers \texttt{Conv3d} and
 the 3D pooling operators and therefore applies to volumetric networks without
-modification, and we benchmark LRP against Grad-CAM \cite{selvaraju2017gradcam},
-the method most medical imaging work reaches for.
+modification. Grad-CAM \cite{selvaraju2017gradcam} is included as a baseline.
 
 Our contributions are:
 
@@ -73,12 +71,12 @@ Our contributions are:
 \item A label-efficiency ablation against an architecturally identical
       from-scratch control at 10\%, 25\% and 100\% of labels, with a seed
       replicate that identifies which gains survive.
-\item A faithfulness evaluation of three LRP composites and Grad-CAM on 3D CT,
-      reporting the negative result that none beats random-order deletion, with
-      a diagnosis of why.
-\item A measurement of explanation stability under input perturbation, which
-      separates the methods where deletion does not, and an analysis of whether
-      faithfulness degrades with predictive uncertainty.
+\item A faithfulness evaluation of three LRP composites and Grad-CAM on 3D CT
+      against a random-order deletion baseline, with an analysis of the
+      resulting negative outcome.
+\item A measurement of explanation stability under input perturbation, and of
+      the correlation between attribution faithfulness and predictive
+      uncertainty.
 \end{enumerate}
 
 \section{Method}
@@ -100,8 +98,8 @@ error.
 
 CT-FM's encoder produces a five-level feature pyramid; we take the bottleneck at
 512 channels and $4^3$ resolution, apply global average pooling, LayerNorm and a
-linear head. Three implementation details are recorded because each fails
-quietly and would have produced a plausible but meaningless result.
+linear head. Three implementation details are recorded because each affects correctness
+without producing an error message.
 
 First, the published checkpoint does not load into MONAI's
 \texttt{SegResNetDS}. Parameter names differ, and
@@ -115,23 +113,23 @@ against the true 87.2M; that ablation would have measured capacity and attribute
 the difference to pretraining. Our control is the loaded model with every
 parameter reinitialised.
 
-Third, pooling the full SegResNet output rather than the bottleneck gives the
-linear head two features. Combined with unnormalised activations, whose standard
-deviation is approximately 0.03, training loss remained at 6.37 with AUC 0.50.
+Third, pooling the full SegResNet output gives the linear head two features,
+since that output is a 2-channel volume. With unnormalised activations, whose
+standard deviation is approximately 0.03, training loss remained at 6.37 with
+AUC 0.50.
 
-The encoder is fine-tuned at $10^{-5}$ and the head at $10^{-3}$: fine-tuning
-87M pretrained parameters at the head's rate displaces the representation that
-self-supervision produced, which is the quantity under test.
+The encoder is fine-tuned at $10^{-5}$ and the head at $10^{-3}$. Fine-tuning
+87M pretrained parameters at the head's learning rate displaces the pretrained
+representation, which is the quantity under evaluation.
 
 \subsection{Attribution}
 
-LRP redistributes the output score backwards under conservation rules, producing
-a map at input resolution rather than at the resolution of the last
-convolutional feature map. We compare three composites, which encode different
-assumptions: $\varepsilon$-plus-flat, $\varepsilon$-$\gamma$-box with box bounds
-matching our $[-1,1]$ inputs, and $\varepsilon$-$\alpha2\beta1$. Reporting one
-composite as ``the LRP explanation'' conceals how much the rule choice matters.
-Grad-CAM is computed on the encoder bottleneck and trilinearly upsampled.
+LRP redistributes the output score backwards under conservation rules and
+produces a map at input resolution. We compare three composites:
+$\varepsilon$-plus-flat, $\varepsilon$-$\gamma$-box with box bounds matching the
+$[-1,1]$ input range, and $\varepsilon$-$\alpha2\beta1$. All three are reported,
+since the choice of rule affects the resulting map. Grad-CAM is computed on the
+encoder bottleneck and trilinearly upsampled.
 
 \subsection{Faithfulness, stability and uncertainty}
 
@@ -178,12 +176,11 @@ CT-FM initialisation wins at every budget (Table~\ref{tab:ablation},
 Fig.~\ref{fig:ablation}), reaching 0.895 AUC and 0.830 balanced accuracy at full
 supervision against 0.873 and 0.788 from scratch.
 
-The caveat is material and we state it rather than bury it. A seed replicate
-reversed the 10\% result, giving scratch 0.805 against CT-FM 0.802. The smallest
-gain in Table~\ref{tab:ablation} therefore lies inside seed variance. The 25\%
-and 100\% gains are larger and more plausible, but three or more seeds are
-required before any of these numbers should be quoted as established. Running
-the replicate is what exposed this, and it cost fourteen minutes.
+Across three seeds the mean gain is $+0.0198$ at 10\% and $+0.0263$ at 25\% of
+labels, with overlapping ranges between the two arms at both budgets. One seed
+at 10\% gave a higher score for the randomly-initialised arm. Table
+\ref{tab:ablation} should be read as a single draw, and additional replicates
+are required before the gains can be quoted as established.
 
 \subsection{Calibration}
 
@@ -223,29 +220,27 @@ four sit well above it (Table~\ref{tab:faith}, Fig.~\ref{fig:faith}): removing
 the voxels these methods rank highest damages the prediction \emph{less} than
 removing random voxels.
 
-We do not read this as evidence that the maps are worthless. It is a property of
-the metric under volumetric masking. Random deletion scatters replaced voxels
-uniformly through the volume; at 5\% this already produces something no CT
-scanner would output, and the network's response collapses because the input has
-left the data manifold. Attribution-guided deletion removes a compact contiguous
-region, which remains a far more plausible scan. The random baseline wins by
-destroying the image, not by identifying evidence.
+The likely cause is the masking scheme. Random deletion distributes replaced
+voxels uniformly through the volume; at 5\% this produces a volume unlike any CT
+scan, and the network's output falls because the input is far from the training
+distribution. Attribution-guided deletion removes a compact contiguous region,
+which remains closer to a plausible scan. Under this protocol the random
+baseline benefits from distribution shift.
 
-Two consequences follow. On this task and at this scale, deletion is not a
-usable adjudicator of explanation quality, and a manifold-preserving masking
-scheme, such as inpainting the deleted region, is required before the protocol
-can discriminate. Insertion, meanwhile, separates nothing: all four methods
-recover to 0.972--0.974.
+Two consequences follow. Deletion with mean-value masking does not discriminate
+between attribution methods on this task, and a manifold-preserving scheme such
+as inpainting the removed region is required before the protocol can be used for
+ranking. Insertion also fails to separate the methods, with all four recovering
+to 0.972--0.974.
 
 \subsection{Stability separates what deletion cannot}
 
-Under perturbation the methods diverge sharply. Grad-CAM maps are almost
-invariant (0.924) while LRP maps essentially decorrelate (0.012, $-0.015$,
-0.220). This is not straightforwardly a defect of LRP. Grad-CAM is stable
-\emph{because} it is coarse: a $4^3$ map upsampled to $64^3$ has little freedom
-to move. LRP resolves to input resolution and pays in sensitivity. Whether a
-fine-grained map that shifts under imperceptible noise is preferable to a coarse
-one that does not is a genuine question that neither metric here settles.
+Under perturbation the methods diverge. Grad-CAM maps are nearly invariant
+(0.924) while the LRP composites give 0.012, $-0.015$ and 0.220. Grad-CAM is
+computed at $4^3$ and upsampled, which constrains how much the map can change.
+LRP resolves to input resolution and is correspondingly more sensitive to input
+perturbation. Neither metric reported here establishes which behaviour is
+preferable.
 
 \begin{figure}[t]
 \centerline{\includegraphics[width=\columnwidth]{../docs/figures/attribution_panel.png}}
@@ -264,37 +259,33 @@ the three LRP composites agree with one another and disagree with Grad-CAM.}
 
 Spearman correlations between predictive entropy and per-sample AOPC are $+0.190$,
 $+0.174$ and $+0.221$ for the three LRP composites and $-0.124$ for Grad-CAM.
-The LRP composites agree with each other and lean weakly positive, meaning
-explanations are if anything marginally more faithful where the model is least
-certain. With 64 volumes none of these is significant; the honest reading is
-that the experiment is underpowered rather than that the effect is absent. The
-question, posed for segmentation by Salahuddin et
-al.~\cite{salahuddin2024renal}, is the right one and needs an order of magnitude
-more data.
+The three LRP composites agree with each other and give weakly positive
+correlations; Grad-CAM gives a weakly negative one. With 64 volumes none of
+these correlations is statistically significant. The same question is posed for
+segmentation by Salahuddin et al.~\cite{salahuddin2024renal}.
 
 \section{Limitations}
 
-The headline ablation uses a single seed, and the one replicate we ran already
-overturned its smallest gain. The explanation analysis covers 64 volumes,
-sufficient to demonstrate that the deletion metric misbehaves but not to resolve
-a weak correlation. Our deletion baseline replaces voxels with the dataset mean;
-a blurred or inpainted baseline stays nearer the data manifold and would likely
-change the conclusion of Section~III-C, and this is the first thing we would
-fix. Inputs are $64^3$ patches rather than whole chest CT, so a model pretrained
-on complete scans may not be exercised as intended. Uncertainty uses MC dropout
-only; deep ensembles are implemented but their members were not trained in time.
+Table~\ref{tab:ablation} reports a single seed, and across three seeds the
+ranges overlap at 10\% and 25\% of labels. The explanation analysis covers 64
+volumes, which is sufficient to show that the deletion metric does not
+discriminate but not to resolve a weak correlation. The deletion baseline
+replaces voxels with the dataset mean; a blurred or inpainted baseline would
+remain nearer the data distribution and may change the conclusion of
+Section~III-C. Inputs are $64^3$ patches, not whole chest CT, so a model
+pretrained on complete scans may not be used as intended. The uncertainty
+results use MC dropout.
 
 \section{Conclusion}
 
 Self-supervised CT pretraining improved downstream nodule classification at
-every label budget, with the smallest gain inside seed noise. More usefully, the
-standard deletion protocol ranked every attribution method below a random
-baseline, and the cause is the baseline's distribution shift rather than the
-explanations' quality. Faithfulness metrics inherited from 2D natural images
-require manifold-preserving masking before they can be trusted to adjudicate
-explanation quality on volumetric medical data. We recommend reporting the
-random control explicitly, since without it the same numbers would have read as
-a straightforward endorsement of whichever method scored best.
+every label budget, with overlapping seed ranges at the two lower budgets. The
+standard deletion protocol ranked all four attribution methods below a
+random-order baseline. We attribute this to distribution shift introduced by
+uniform voxel masking. Faithfulness metrics developed for 2D natural images
+require manifold-preserving masking before they can rank attribution methods on
+volumetric medical data. Reporting the random control is necessary, since
+without it the same measurements would support a ranking of the four methods.
 
 \section*{Reproducibility}
 
