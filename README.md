@@ -11,8 +11,8 @@ faithfulness evaluation and uncertainty estimation.
 Three questions:
 
 1. Does self-supervised CT pretraining improve downstream performance compared
-   with the same architecture trained from random initialisation, and does the
-   advantage grow when labels are scarce?
+   with the same architecture trained from random initialisation, and is the
+   effect larger than the variation between training seeds?
 2. Do the resulting attribution maps pass a faithfulness test, measured by
    deletion, insertion and AOPC against a random-order baseline?
 3. Does attribution faithfulness vary with predictive uncertainty?
@@ -124,24 +124,43 @@ Expected calibration error is computed over 10 equal-width confidence bins.
 
 ![ablation](docs/figures/ablation.png)
 
-Test AUC, seed 0:
+Three paired seeds were run at each label budget. Both arms within a seed use
+identical data subsets. Per-seed test AUC:
 
-| Labels | n | CT-FM | Scratch | Gain |
+| Labels | Seed | CT-FM | Scratch | Gain |
 |---|---|---|---|---|
-| 10% | 116 | 0.8283 | 0.8168 | +0.0116 |
-| 25% | 290 | 0.8472 | 0.8124 | +0.0348 |
-| 100% | 1,158 | 0.8951 | 0.8733 | +0.0218 |
+| 10% | 0 | 0.8283 | 0.8168 | +0.0116 |
+| 10% | 1 | 0.8042 | 0.8053 | -0.0011 |
+| 10% | 2 | 0.7936 | 0.7548 | +0.0388 |
+| 25% | 0 | 0.8472 | 0.8124 | +0.0348 |
+| 25% | 1 | 0.8747 | 0.8707 | +0.0040 |
+| 25% | 2 | 0.8552 | 0.8533 | +0.0018 |
+| 100% | 0 | 0.8951 | 0.8733 | +0.0218 |
+| 100% | 1 | 0.9111 | 0.9100 | +0.0011 |
+| 100% | 2 | 0.8805 | 0.8860 | -0.0055 |
 
-At full supervision CT-FM reaches 0.895 AUC and 0.830 balanced accuracy, against
-0.873 and 0.788 from random initialisation.
+Summary over the three seeds:
+
+| Labels | CT-FM mean | Scratch mean | Mean gain | Gain range | CT-FM wins |
+|---|---|---|---|---|---|
+| 10% | 0.8087 | 0.7923 | +0.0164 | [-0.0011, +0.0388] | 2 of 3 |
+| 25% | 0.8591 | 0.8455 | +0.0136 | [+0.0018, +0.0348] | 3 of 3 |
+| 100% | 0.8955 | 0.8898 | +0.0058 | [-0.0055, +0.0218] | 2 of 3 |
+
+The mean gain from pretraining is positive at all three budgets. It is smaller
+than the spread between seeds at 10% and 100%, where one seed in each case
+favoured the randomly-initialised arm. Only the 25% budget shows CT-FM ahead in
+every seed, and there the mean gain is +0.0136.
+
+The largest single-seed gain at full labels (+0.0218, seed 0) is roughly four
+times the three-seed mean (+0.0058). Any single run of this experiment can
+therefore overstate or understate the effect by a wide margin.
+
+With three seeds the data supports a small positive effect of pretraining on
+this task and does not support a specific effect size. Distinguishing +0.006
+from zero at 100% labels would need substantially more replicates.
 
 ![training curves](docs/figures/training_curves.png)
-
-**Seed variance.** Across three seeds the mean gain is +0.0198 at 10% and
-+0.0263 at 25%, with overlapping ranges between the two arms at both budgets.
-Individual seed results at 10% include one in which the scratch arm scored
-higher. The per-seed values should be treated as noisy and the table above as a
-single draw.
 
 ### 4.2 Calibration
 
@@ -310,9 +329,9 @@ paper/                IEEE-format technical report
 
 ## 7. Limitations
 
-**Seeds.** The headline table is a single seed. Across three seeds the ranges
-overlap at 10% and 25% of labels. More replicates are needed before the gains
-can be quoted as established.
+**Seeds.** Three paired seeds per budget. The mean gain is smaller than the
+between-seed spread at 10% and 100% of labels, so the effect size is not
+resolved. Section 4.1 reports per-seed values so the variance is visible.
 
 **Sample size.** The attribution analysis covers 64 volumes, which is sufficient
 to show that the deletion metric does not discriminate but not to resolve a weak
