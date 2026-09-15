@@ -333,9 +333,10 @@ paper/                IEEE-format technical report
 between-seed spread at 10% and 100% of labels, so the effect size is not
 resolved. Section 4.1 reports per-seed values so the variance is visible.
 
-**Sample size.** The attribution analysis covers 64 volumes, which is sufficient
-to show that the deletion metric does not discriminate but not to resolve a weak
-correlation between uncertainty and faithfulness.
+**Sample size.** The attribution analysis covers 64 volumes. This is sufficient
+to show that the deletion metric fails to discriminate between methods. Resolving
+the weak correlation between uncertainty and faithfulness would require a larger
+sample.
 
 **Deletion baseline.** Voxels are replaced with the dataset mean. A blurred or
 inpainted baseline would stay nearer the data distribution and may change the
@@ -345,9 +346,9 @@ conclusion in Section 4.3.
 the representation may not be used as intended at this scale.
 
 **Ensemble size.** The deep ensemble in Section 4.5 has four members, which is
-at the low end for stable uncertainty estimates. The members also share a
-pretrained initialisation, so their diversity comes from data ordering,
-subsampling and dropout, not from independent pretraining.
+at the low end for stable uncertainty estimates. All members share the same
+pretrained initialisation, so their diversity arises only from data ordering,
+subsampling and dropout.
 
 ---
 

@@ -326,8 +326,8 @@ volumes, which is sufficient to show that the deletion metric does not
 discriminate but not to resolve a weak correlation. The deletion baseline
 replaces voxels with the dataset mean; a blurred or inpainted baseline would
 remain nearer the data distribution and may change the conclusion of
-Section~III-C. Inputs are $64^3$ patches, not whole chest CT, so a model
-pretrained on complete scans may not be used as intended. The deep ensemble has
+Section~III-C. Inputs are $64^3$ patches. A model pretrained on complete scans
+may therefore be used outside the regime it was designed for. The deep ensemble has
 four members, which is at the low end for stable uncertainty estimates, and its
 members share a pretrained initialisation, so their diversity arises from data
 ordering, subsampling and dropout only.
