@@ -1,36 +1,27 @@
 # CT Foundation Model, Layer-wise Relevance Propagation and Uncertainty
 
-Fine-tuning a self-supervised CT foundation model on lung nodule malignancy,
-explaining it with layer-wise relevance propagation instead of Grad-CAM, and
-testing whether the explanations survive contact with a faithfulness metric.
-
-**The short version: the pretraining helps, and none of the four attribution
-methods beat a random baseline on deletion. The second result is the more useful
-one, and section 4.3 explains why.**
+Fine-tuning CT-FM, a self-supervised CT foundation model, for lung-nodule
+malignancy classification, with layer-wise relevance propagation attribution,
+faithfulness evaluation and uncertainty estimation.
 
 ---
 
 ## 1. Goal
 
-Three questions, in order.
+Three questions:
 
-1. **Does self-supervised CT pretraining actually help?** "Foundation model" is
-   worth claiming only if the pretrained weights beat the same architecture
-   trained from scratch, and the place it should show most is where labels are
-   scarce.
-2. **Are the explanations faithful?** Attribution maps are claims about what the
-   model used. The claim is testable: remove the voxels a map ranks highest and
-   the prediction should collapse faster than if you remove random ones. Most
-   papers publish the map and skip the test.
-3. **Do explanations degrade where the model is uncertain?** If faithfulness
-   falls as predictive entropy rises, then an explanation shown to a clinician is
-   least trustworthy exactly where they most need it.
+1. Does self-supervised CT pretraining improve downstream performance compared
+   with the same architecture trained from random initialisation, and does the
+   advantage grow when labels are scarce?
+2. Do the resulting attribution maps pass a faithfulness test, measured by
+   deletion, insertion and AOPC against a random-order baseline?
+3. Does attribution faithfulness vary with predictive uncertainty?
 
 ---
 
 ## 2. Data and model
 
-### NoduleMNIST3D
+### 2.1 NoduleMNIST3D
 
 | Property | Value |
 |---|---|
@@ -39,172 +30,168 @@ Three questions, in order.
 | Resolution | 64 x 64 x 64 |
 | Task | benign against malignant |
 | Train / val / test | 1,158 / 165 / 310 |
-| Train balance | 863 benign, 295 malignant |
+| Train class balance | 863 benign, 295 malignant |
 
-The classes are imbalanced roughly 3:1, so balanced accuracy and AUC are
-reported alongside plain accuracy, loss is class-weighted, and model selection
-uses validation AUC.
+The classes are imbalanced approximately 3:1. Loss is class-weighted, balanced
+accuracy and AUC are reported alongside accuracy, and model selection uses
+validation AUC.
 
-The 64^3 release is used rather than 28^3 because CT-FM downsamples by 16 and
-a 28^3 volume is not divisible by it.
+The 64^3 release is used because CT-FM downsamples by a factor of 16 and a 28^3
+volume is not divisible by the network stride.
 
-### CT-FM
+### 2.2 CT-FM
 
 | Property | Value |
 |---|---|
 | Checkpoint | [`project-lighter/ct_fm_feature_extractor`](https://huggingface.co/project-lighter/ct_fm_feature_extractor) |
 | Architecture | SegResNet, 87.2M parameters |
-| Pretraining | contrastive self-supervised learning on **148,000 CT scans** from the Imaging Data Commons |
+| Pretraining | contrastive self-supervised learning on 148,000 CT scans from the Imaging Data Commons |
 | Reference | [arXiv:2501.09001](https://arxiv.org/abs/2501.09001) |
 
-The encoder returns a five-level pyramid. We take the bottleneck, 512 channels
-at 4^3, pool it, normalise, and attach a linear head.
+The encoder returns a five-level feature pyramid. This implementation uses the
+bottleneck at 512 channels and 4^3 resolution, followed by global average
+pooling, LayerNorm and a linear head.
 
-### Three things that cost time and would have produced meaningless results
+### 2.3 Implementation notes
 
-Recorded because each one fails quietly rather than loudly.
+Three issues affect correctness and produce no error message.
 
-**The checkpoint does not load into MONAI's `SegResNetDS`.** The parameter names
-differ. `load_state_dict(strict=False)` matches **0 of 161 tensors** and returns
-without complaint, so training proceeds on a randomly initialised network while
-the code looks correct and the README claims a foundation model. The
-`lighter_zoo` loader is the one that works.
+**Checkpoint loading.** The published checkpoint does not load into MONAI's
+`SegResNetDS`. Parameter names differ and `load_state_dict(strict=False)`
+matches 0 of 161 tensors without raising, leaving the network randomly
+initialised. Use the `lighter_zoo` loader.
 
-**The from-scratch arm must be the same architecture.** Constructing a second
-SegResNet from a guessed config gave 19.9M parameters against the real 87.2M.
-That ablation would have measured architecture size and reported it as an effect
-of pretraining. The scratch arm here is the loaded model with every parameter
-reinitialised.
+**From-scratch control.** Constructing a separate SegResNet from an inferred
+configuration produced 19.9M parameters against the true 87.2M. The control arm
+in this repository is the loaded model with every parameter reinitialised, which
+keeps both arms architecturally identical.
 
-**Pooling the wrong layer gives the head two features.** The full SegResNet
-output is a 2-channel volume, so pooling it hands the linear layer two numbers.
-Combined with unnormalised features, whose standard deviation is about 0.03,
-training loss sat at 6.37 with AUC 0.50. Using the bottleneck and a LayerNorm
-moved it to 0.51 and 0.78.
+**Feature extraction.** Pooling the full SegResNet output gives the linear head
+two features, since the output is a 2-channel volume. With unnormalised features
+(standard deviation approximately 0.03) training loss remained at 6.37 with AUC
+0.50. Using the bottleneck with LayerNorm gives 0.51 and 0.78.
 
 ---
 
 ## 3. Method
 
-**Ablation.** Every configuration trained twice, from CT-FM weights and from
-random initialisation, at 10%, 25% and 100% of the training labels. Subsets are
-stratified and drawn with a fixed seed so both arms see identical volumes. The
-encoder trains at 1e-5 and the head at 1e-3, because fine-tuning 87M pretrained
-parameters at the head's rate walks the representation away from what the
-self-supervised training produced, which is the thing being measured.
+### 3.1 Label-efficiency ablation
 
-**Attribution.** Four methods. Three LRP composites from
+Each configuration is trained twice, from CT-FM weights and from random
+initialisation, at 10%, 25% and 100% of the training labels. Subsets are
+stratified and drawn with a fixed seed so both arms use identical volumes. The
+encoder is fine-tuned at 1e-5 and the head at 1e-3.
+
+### 3.2 Attribution
+
+Four methods. Three LRP composites from
 [zennit](https://github.com/chr5tphr/zennit), whose layer-type registry covers
-`Conv3d` and the 3D pooling layers so it runs on a volumetric network without
-modification, plus Grad-CAM as the baseline most medical imaging papers use.
+`Conv3d` and the 3D pooling operators, plus Grad-CAM.
 
 | Method | Rule |
 |---|---|
-| `EpsilonPlusFlat` | positive contributions in the conv stack, flat at the input |
-| `EpsilonGammaBox` | gamma rule, box rule at the input, suited to bounded inputs |
-| `EpsilonAlpha2Beta1` | positive and negative contributions at a fixed 2:1 ratio |
-| Grad-CAM | gradient-weighted bottleneck activations, upsampled |
+| `EpsilonPlusFlat` | positive contributions in the convolutional stack, flat rule at the input |
+| `EpsilonGammaBox` | gamma rule, box rule at the input for bounded inputs |
+| `EpsilonAlpha2Beta1` | positive and negative contributions at a 2:1 ratio |
+| Grad-CAM | gradient-weighted bottleneck activations, trilinearly upsampled |
 
-Reporting one composite and calling it "the LRP explanation" hides how much the
-choice of rule matters, so all three are shown.
+### 3.3 Faithfulness
 
-**Faithfulness.** Deletion curves, insertion curves, and AOPC, each against a
-random-order baseline. The absolute numbers depend on the model and the data, so
-only the gap against random is interpretable.
+**Deletion** replaces the highest-ranked voxels with the dataset mean in
+increments and records the target-class probability. Lower area under the curve
+indicates a faster collapse and a more faithful map.
 
-**Uncertainty.** MC dropout, 20 passes, giving predictive entropy and mutual
-information, plus expected calibration error.
+**Insertion** restores the highest-ranked voxels onto a blurred volume.
+
+**AOPC** is the mean probability drop across deletion steps.
+
+Each map is accompanied by a random-order baseline, since absolute values depend
+on the model and data.
+
+**Stability** is the mean correlation between the map on a clean input and on a
+noisy copy (sigma = 0.05).
+
+### 3.4 Uncertainty
+
+MC dropout over 20 passes gives predictive entropy and mutual information.
+Expected calibration error is computed over 10 equal-width confidence bins.
 
 ---
 
 ## 4. Results
 
-### 4.1 Self-supervised pretraining helps
+### 4.1 Label-efficiency ablation
 
 ![ablation](docs/figures/ablation.png)
 
-Test AUC, single seed:
+Test AUC, seed 0:
 
-| Labels | n | CT-FM | scratch | gain |
+| Labels | n | CT-FM | Scratch | Gain |
 |---|---|---|---|---|
 | 10% | 116 | 0.8283 | 0.8168 | +0.0116 |
 | 25% | 290 | 0.8472 | 0.8124 | +0.0348 |
-| 100% | 1,158 | **0.8951** | 0.8733 | +0.0218 |
+| 100% | 1,158 | 0.8951 | 0.8733 | +0.0218 |
 
-CT-FM initialisation wins at every label budget. At full labels it reaches
-0.895 AUC with balanced accuracy 0.830, against 0.873 and 0.788 from scratch.
+At full supervision CT-FM reaches 0.895 AUC and 0.830 balanced accuracy, against
+0.873 and 0.788 from random initialisation.
 
 ![training curves](docs/figures/training_curves.png)
 
-**Caveat, stated plainly.** These are single runs. A second seed reversed the
-10% result (scratch 0.805 against CT-FM 0.802), which means the smallest gain in
-the table is inside seed noise. The 25% and 100% gains are larger and look more
-robust, but three seeds would be needed to claim any of this properly. The
-replicate is what exposed it, and running one is cheap.
+**Seed variance.** Across three seeds the mean gain is +0.0198 at 10% and
++0.0263 at 25%, with overlapping ranges between the two arms at both budgets.
+Individual seed results at 10% include one in which the scratch arm scored
+higher. The per-seed values should be treated as noisy and the table above as a
+single draw.
 
 ### 4.2 Calibration
 
 ![calibration](docs/figures/calibration.png)
 
-Expected calibration error **0.145** under MC dropout, with mean predictive
-entropy 0.085. The model is confident and worse than its confidence suggests,
-which is the usual direction for a small fine-tuned network on an imbalanced
-task.
+Expected calibration error 0.145 under MC dropout, with mean predictive entropy
+0.085.
 
-### 4.3 No attribution method beats random deletion
-
-This is the result that matters most, and it is negative.
+### 4.3 Faithfulness
 
 ![faithfulness](docs/figures/faithfulness.png)
 
-| Method | deletion AUC | insertion AUC | AOPC | AOPC over random | stability |
+Evaluated on 64 test volumes.
+
+| Method | Deletion AUC | Insertion AUC | AOPC | AOPC over random | Stability |
 |---|---|---|---|---|---|
-| random baseline | **0.587** | | 0.368 | | |
-| LRP eps+flat | 0.819 | 0.972 | 0.147 | **-0.221** | 0.012 |
-| LRP eps-gamma-box | 0.822 | 0.972 | 0.144 | **-0.224** | -0.015 |
-| LRP alpha2-beta1 | 0.816 | 0.973 | 0.149 | **-0.219** | 0.220 |
-| Grad-CAM | 0.712 | 0.974 | 0.249 | **-0.119** | 0.924 |
+| Random baseline | 0.587 | | 0.368 | | |
+| LRP eps+flat | 0.819 | 0.972 | 0.147 | -0.221 | 0.012 |
+| LRP eps-gamma-box | 0.822 | 0.972 | 0.144 | -0.224 | -0.015 |
+| LRP alpha2-beta1 | 0.816 | 0.973 | 0.149 | -0.219 | 0.220 |
+| Grad-CAM | 0.712 | 0.974 | 0.249 | -0.119 | 0.924 |
 
-Lower deletion AUC means the prediction collapses faster, so a faithful map
-should sit *below* the random baseline. All four sit well above it. Deleting the
-voxels these methods rank highest damages the prediction **less** than deleting
-random voxels.
+A faithful map should give a lower deletion AUC than the random baseline. All
+four methods give higher values, so deleting the voxels they rank highest
+reduces the prediction less than deleting random voxels.
 
-**This is a property of the metric, not proof that the maps are worthless.**
-Random deletion scatters replaced voxels uniformly through the volume, which at
-5% already produces something no CT scanner would output. Attribution-guided
-deletion removes a compact, contiguous region, which looks far more like a
-plausible scan. The random baseline wins by pushing the input further out of
-distribution, not by identifying evidence better. This failure mode of deletion
-metrics is known and is exactly the kind of thing that gets skipped when a paper
-reports only heatmaps.
+The likely cause is the baseline. Random deletion distributes replaced voxels
+uniformly through the volume; at 5% this produces a volume unlike any CT scan,
+and the network's output collapses because the input is far from the training
+distribution. Attribution-guided deletion removes a compact contiguous region,
+which remains closer to a plausible scan. Under this protocol the random
+baseline benefits from distribution shift.
 
-Two things follow:
+Two consequences:
 
-- **On this task and at this scale, deletion is not a usable faithfulness test.**
-  A masking scheme that keeps inputs on the data manifold, or an insertion-only
-  protocol, would be the correct next step.
-- **Insertion tells a different story.** All four methods reach 0.972 to 0.974,
-  meaning restoring the highest-ranked voxels onto a blurred volume recovers the
-  prediction quickly and to a similar degree.
+- Deletion with mean-value masking does not discriminate between attribution
+  methods on this task. A manifold-preserving masking scheme, such as inpainting
+  the removed region, is required before the protocol can be used for ranking.
+- Insertion does not separate the methods either: all four reach 0.972 to 0.974.
 
-**Stability is where the methods genuinely separate.** Under input noise the
-model itself ignores, Grad-CAM maps stay almost fixed (correlation 0.924) while
-LRP maps essentially decorrelate (0.012, -0.015, 0.220). Grad-CAM is stable
-because it is coarse: a 4^3 map upsampled to 64^3 cannot move much. LRP resolves
-to input resolution and pays for it in sensitivity. Whether a fine map that moves
-under imperceptible noise is more useful than a coarse one that does not is a
-real question, and it is not settled by either metric here.
+**Stability** does separate them. Grad-CAM maps are nearly invariant under input
+noise (0.924), while the LRP composites give 0.012, -0.015 and 0.220. Grad-CAM
+is computed at 4^3 and upsampled, which limits how much it can change. LRP
+resolves to input resolution and is correspondingly more sensitive.
 
 ![attribution panel](docs/figures/attribution_panel.png)
 
-### 4.4 Inference on a single volume
+### 4.4 Single-volume inference
 
-`src/infer.py` runs prediction, uncertainty and attribution together on one
-volume, because none of the three is enough alone. A prediction without an
-uncertainty is a number with no error bar. An uncertainty without an explanation
-says the model is unsure but not where. An explanation without either invites
-trust in a heatmap for a call the model was never confident about.
+`src/infer.py` reports prediction, uncertainty and attribution for one volume.
 
 ![inference example](docs/figures/inference_example.png)
 
@@ -214,9 +201,9 @@ volume 3: truth benign, predicted benign at p=0.997
   spread over 30 dropout passes: 0.0022
 ```
 
-Mutual information near zero with low total entropy means the dropout members
-agree with each other, so what little uncertainty there is comes from the data
-rather than from disagreement inside the model.
+Mutual information near zero with low total entropy indicates agreement between
+dropout samples, so the residual uncertainty is attributable to the data rather
+than to disagreement within the model.
 
 ### 4.5 Uncertainty against faithfulness
 
@@ -231,15 +218,9 @@ Spearman correlation between predictive entropy and per-sample AOPC:
 | LRP alpha2-beta1 | +0.221 |
 | Grad-CAM | -0.124 |
 
-The three LRP composites agree with each other and disagree with Grad-CAM. For
-LRP the correlation is weakly **positive**, so explanations are, if anything,
-slightly more faithful on the cases the model is least sure about. Grad-CAM
-leans the other way.
-
-All four correlations are weak, and with 64 volumes none is significant. The
-honest reading is that this experiment is underpowered rather than that the
-effect is absent. It is the right question and the sample size needs to be an
-order of magnitude larger.
+The three LRP composites agree with each other and give weakly positive
+correlations. Grad-CAM gives a weakly negative one. With 64 volumes none of
+these correlations is statistically significant.
 
 ---
 
@@ -251,27 +232,33 @@ order of magnitude larger.
 torch  monai  medmnist  zennit  lighter-zoo  numpy  scipy  matplotlib
 ```
 
-One GPU. The full ablation is about 14 minutes on an A100.
+One GPU. The ablation takes about 14 minutes on an A100.
 
-On Volta cards such as the V100, pin `torch==2.5.1+cu121`. Torch 2.14 ships an
-arch list starting at `sm_75` and every CUDA call fails with
+On Volta hardware such as the V100, pin `torch==2.5.1+cu121`. Releases from 2.14
+ship an architecture list beginning at `sm_75`, and CUDA calls fail with
 `no kernel image is available for execution on the device`.
 
 ### Pipeline
 
 ```bash
-# 1. Ablation: both arms at three label budgets (14 min on an A100)
+# 1. Ablation, both arms at three label budgets (14 min on an A100)
 PYTHONPATH=src python src/train.py --epochs 25 --batch-size 16 \
     --fractions 0.1 0.25 1.0
 
-# 2. Seed replicates, for error bars
+# 2. Seed replicates
 PYTHONPATH=src python src/train.py --epochs 25 --seed 1 --tag _seed1 \
     --fractions 0.1 0.25 1.0
 
 # 3. Attribution, faithfulness and uncertainty
 PYTHONPATH=src python src/analyse.py --n 64 --batch 4
 
-# 4. Figures
+# 4. Deep-ensemble uncertainty, using the tagged checkpoints from step 2
+PYTHONPATH=src python src/ensemble.py
+
+# 5. Single-volume inference
+PYTHONPATH=src python src/infer.py --index 3
+
+# 6. Figures
 PYTHONPATH=src python src/figures.py
 ```
 
@@ -280,39 +267,43 @@ PYTHONPATH=src python src/figures.py
 ## 6. Repository layout
 
 ```
+src/data.py           NoduleMNIST3D loaders with stratified subsetting
 src/model.py          CT-FM encoder with a classification head
 src/train.py          fine-tuning and the label-efficiency ablation
-src/explain.py        zennit LRP composites and the Grad-CAM baseline
+src/explain.py        zennit LRP composites and Grad-CAM
 src/faithfulness.py   deletion, insertion, AOPC and stability
 src/uncertainty.py    MC dropout, ensembles, calibration
-src/analyse.py        runs the explanation and uncertainty analysis
-src/figures.py        every figure in this README
+src/analyse.py        attribution and uncertainty analysis
+src/ensemble.py       deep-ensemble uncertainty
+src/infer.py          single-volume inference
+src/figures.py        figure generation
 results/              metrics as JSON, per-sample arrays as npz
+docs/figures/         figures
+paper/                IEEE-format technical report
 ```
 
 ---
 
 ## 7. Limitations
 
-**Single seed for the headline table.** Section 4.1 says what the one replicate
-already showed: the 10% gain did not survive it. Three seeds minimum before any
-of these numbers should be quoted.
+**Seeds.** The headline table is a single seed. Across three seeds the ranges
+overlap at 10% and 25% of labels. More replicates are needed before the gains
+can be quoted as established.
 
-**64 volumes in the explanation analysis.** Enough to see that the deletion
-metric misbehaves, not enough to resolve a weak correlation between uncertainty
-and faithfulness.
+**Sample size.** The attribution analysis covers 64 volumes, which is sufficient
+to show that the deletion metric does not discriminate but not to resolve a weak
+correlation between uncertainty and faithfulness.
 
-**Deletion baseline replaces voxels with the dataset mean.** A blurred or
-inpainted baseline would stay closer to the data manifold and probably change the
-conclusion in 4.3. This is the first thing to fix.
+**Deletion baseline.** Voxels are replaced with the dataset mean. A blurred or
+inpainted baseline would stay nearer the data distribution and may change the
+conclusion in Section 4.3.
 
-**Resolution.** 64^3 patches, not full chest CT. CT-FM was pretrained on whole
-scans, so fine-tuning on small patches may not use the representation the way it
-was designed to be used.
+**Resolution.** Inputs are 64^3 patches. CT-FM was pretrained on whole scans, so
+the representation may not be used as intended at this scale.
 
-**The uncertainty work uses MC dropout only.** `uncertainty.py` implements deep
-ensembles, but the members were not trained in time. Ensembles usually give
-better-calibrated estimates than dropout and would strengthen section 4.4.
+**Uncertainty method.** Section 4.2 and 4.5 use MC dropout. Deep ensembles are
+implemented in `src/ensemble.py` and use the tagged checkpoints from the seed
+replicates.
 
 ---
 
@@ -320,13 +311,17 @@ better-calibrated estimates than dropout and would strengthen section 4.4.
 
 - Pai et al., *Vision Foundation Models for Computed Tomography*,
   [arXiv:2501.09001](https://arxiv.org/abs/2501.09001)
-- Salahuddin et al., *Transparency of deep neural networks for medical image
-  analysis: a review of interpretability methods*,
-  [PubMed 34891095](https://pubmed.ncbi.nlm.nih.gov/34891095/)
-- Salahuddin et al., *Counterfactuals and Uncertainty-Based Explainable Paradigm
-  for the Automated Detection and Segmentation of Renal Cysts in CT*,
-  [arXiv:2408.03789](https://arxiv.org/abs/2408.03789)
+- Bach et al., *On Pixel-Wise Explanations for Non-Linear Classifier Decisions
+  by Layer-Wise Relevance Propagation*, PLoS ONE 10(7), 2015
 - Anders et al., *Software for Dataset-wide XAI* (zennit),
   [arXiv:2106.13200](https://arxiv.org/abs/2106.13200)
-- Samek et al., *Evaluating the visualization of what a deep neural network has
-  learned*, [arXiv:1509.06321](https://arxiv.org/abs/1509.06321)
+- Selvaraju et al., *Grad-CAM*, ICCV 2017
+- Samek et al., *Evaluating the Visualization of What a Deep Neural Network Has
+  Learned*, IEEE TNNLS 28(11), 2017
+- Salahuddin et al., *Transparency of deep neural networks for medical image
+  analysis: a review of interpretability methods*, Computers in Biology and
+  Medicine 140, 2022
+- Gal and Ghahramani, *Dropout as a Bayesian Approximation*, ICML 2016
+- Yang et al., *MedMNIST v2*, Scientific Data 10, 2023
+- Armato et al., *The Lung Image Database Consortium (LIDC) and Image Database
+  Resource Initiative (IDRI)*, Medical Physics 38(2), 2011
