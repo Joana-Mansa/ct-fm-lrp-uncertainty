@@ -37,9 +37,9 @@ Matched arms share stratified label subsets for each seed. Training uses class-w
 \begin{center}\small
 \begin{tabular}{rrrrrr}\toprule
 Labels & Patches & Paired seeds & CT-FM AUC & Scratch AUC & Gain\\\midrule
-10\% & 116 & 0,1,2 & 0.8121 & 0.7923 & +0.0198\\
-25\% & 290 & 0,1,2 & 0.8680 & 0.8456 & +0.0224\\
-100\% & 1,158 & 0,2 & 0.8878 & 0.8796 & +0.0081\\\bottomrule
+10\% & 116 & 0,1,2 & 0.8087 & 0.7923 & +0.0164\\
+25\% & 290 & 0,1,2 & 0.8591 & 0.8455 & +0.0136\\
+100\% & 1,158 & 0,1,2 & 0.8955 & 0.8898 & +0.0058\\\bottomrule
 \end{tabular}\end{center}
 
 \includegraphics[width=\linewidth]{../docs/figures/ablation.png}
@@ -55,7 +55,7 @@ Pretrained, seed 2 & 0.8805 & 0.5839 & 0.6916\\
 Scratch, seed 2 & 0.8860 & 0.8129 & 0.7839\\
 Pretrained, seed 10 & 0.9093 & 0.8774 & 0.8303\\\bottomrule
 \end{tabular}\end{center}
-A 2,000-replicate stratified bootstrap of the seed-0 AUC difference gives a 95\% percentile interval of $[-0.0184,0.0659]$. It resamples patches, not patients, and does not include training variability. The seed-2 scratch AUC exceeds the corresponding pretrained AUC. The full seed-1 scratch counterpart and full training record are missing. No universal superiority claim is supported.
+A 2,000-replicate stratified bootstrap of the seed-0 AUC difference gives a 95\% percentile interval of $[-0.0184,0.0659]$. It resamples patches, not patients, and does not include training variability. The seed-2 scratch AUC exceeds the corresponding pretrained AUC. Three completed pairs are recorded at each budget, but the seed-1 scratch checkpoint is unavailable. The seed-1 pretrained record AUC is 0.911077 versus 0.911141 on re-evaluation; the cause of this small discrepancy is unresolved. No universal superiority claim is supported.
 
 \newpage
 \section*{Attribution, uncertainty and interpretation}
@@ -70,14 +70,14 @@ EpsilonGammaBox & 0.8224 & 0.1436 & -0.2242 & -0.0146\\
 EpsilonAlpha2Beta1 & 0.8164 & 0.1494 & -0.2185 & 0.2201\\
 Grad-CAM & 0.7121 & 0.2487 & -0.1192 & 0.9235\\\bottomrule
 \end{tabular}\end{center}
-Random deletion causes a larger confidence drop than all four attribution methods. This does not validate their faithfulness. Masking-induced distribution shift is a hypothesis, not an established cause. The Zennit implementation has no architecture-specific canonizer or validated relevance conservation for the residual and normalisation operations. Finite-map checks on two cases do not resolve that limitation. General conclusions about LRP would therefore be premature. Grad-CAM's coarse $4^3$ origin also helps explain its smoothness; stability is not proof of faithfulness.
+Random deletion causes a larger confidence drop than all four attribution methods. Faithfulness is not validated; masking-induced distribution shift remains a hypothesis. The Zennit implementation has no architecture-specific canonizer or validated relevance conservation for the residual and normalisation operations. Finite-map checks on two cases do not resolve that limitation. General conclusions about LRP would therefore be premature. Grad-CAM's coarse $4^3$ origin also helps explain its smoothness; stability is not proof of faithfulness.
 
 Head-only MC dropout uses 20 passes. The 64-case ECE is 0.1453. On all 310 test patches, saved MC-dropout results have AUC 0.8960 and ECE 0.1265; a four-checkpoint probability ensemble has AUC 0.9085 and ECE 0.0505. The ensemble AUC is below the best member's 0.9111. These are test-set observations, not externally validated calibration claims.
 
 Entropy/AOPC Spearman correlations range from -0.1245 to 0.2214. All four unadjusted two-sided p-values exceed 0.05 (0.079 to 0.327). No clear association is established. Low mutual information from head dropout does not prove aleatoric uncertainty or clinical reliability.
 
 \section*{Verification, limits and reproduction}
-The audit checked archive hashes and real samples; strictly loaded six checkpoints; recomputed full-test classification and four-member ensemble metrics; checked attribution shapes and perturbation endpoints on two cases; and recalculated saved-array ECE, AOPC and correlations. Lower-budget scores were checked against records because those weights were not retained. Full training and the original stochastic attribution/dropout runs were not repeated.
+The audit checked data provenance, six full-test checkpoint predictions, ensemble metrics, saved-array statistics and two attribution cases. Paired summaries use completed GitHub records; differing earlier server files are archived. Lower-budget scores and full scratch seed 1 are record-based because those checkpoints were unavailable. Full training and the original stochastic analysis were not repeated.
 
 The distributed arrays lack patient/site identifiers. Split independence and possible overlap with the CT-FM pretraining collection were not independently audited. There is no external cohort, whole-CT evaluation, clinical reader study or validated explanation ground truth. These are the next validation needs, not completed achievements.
 

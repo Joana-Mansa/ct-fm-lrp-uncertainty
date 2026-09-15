@@ -25,13 +25,13 @@ The foundation model was pretrained by **Pai et al.**, not in this project. [Dat
 
 ## What do the results support?
 
-Mean test AUC across **matched seeds**, using the same label subset for both arms:
+Mean test AUC across **three matched seeds in the completed experiment records**, using the same label subset for both arms. Lower-budget scores and full-data scratch seed 1 are record-based; their checkpoints were unavailable for re-evaluation:
 
 | Training labels | Patches | Paired seeds | CT-FM | Scratch | Difference |
 |---|---:|---|---:|---:|---:|
-| 10% | 116 | 0, 1, 2 | 0.8121 | 0.7923 | +0.0198 |
-| 25% | 290 | 0, 1, 2 | 0.8680 | 0.8456 | +0.0224 |
-| 100% | 1,158 | 0, 2 | 0.8878 | 0.8796 | +0.0081 |
+| 10% | 116 | 0, 1, 2 | 0.8087 | 0.7923 | +0.0164 |
+| 25% | 290 | 0, 1, 2 | 0.8591 | 0.8455 | +0.0136 |
+| 100% | 1,158 | 0, 1, 2 | 0.8955 | 0.8898 | +0.0058 |
 
 ![Matched-seed AUC and paired differences](docs/figures/ablation.png)
 
@@ -65,7 +65,7 @@ Use the [reproduction guide](docs/reproduce.md) for checked seed-0 weights, sing
 
 - This is a small preprocessed patch benchmark, not whole-CT diagnosis or external clinical validation.
 - Patient/site identifiers are absent from the distributed arrays. Split independence and overlap with CT-FM pretraining data were not independently audited.
-- There are three paired seeds at 10% and 25%, but only two at full data. The full seed-1 scratch counterpart is missing.
+- Three paired seeds are recorded at every budget. The full seed-1 scratch checkpoint is unavailable, and earlier server records differ from the completed GitHub records; [provenance and verification](docs/verification.md) explain the distinction.
 - Mean masking may introduce distribution shift; that explanation for the deletion results remains a hypothesis. LRP rule handling also needs architecture-specific validation.
 - MC dropout is applied to the classification head. Its uncertainty estimates do not establish clinical reliability.
 

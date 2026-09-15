@@ -34,7 +34,7 @@ def collect_ablation():
     pairs = {}
     for p in sorted(RESULTS.glob("ablation*.json")):
         document = json.loads(p.read_text())
-        for run in document["runs"]:
+        for run in document.get("runs", []):
             pairs.setdefault((document["seed"], run["fraction"]), {})[run["pretrained"]] = run["test"]["auc"]
     out = {}
     for (seed, fraction), arms in sorted(pairs.items()):

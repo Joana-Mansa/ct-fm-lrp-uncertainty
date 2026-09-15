@@ -8,7 +8,7 @@ The official `project-lighter/ct_fm_feature_extractor` checkpoint is loaded thro
 
 The scratch arm reinitialises the same architecture. It is not a smaller independently configured network. CT-FM pretraining was carried out by [Pai et al.](https://arxiv.org/abs/2501.09001); this project performs downstream fine-tuning and evaluation.
 
-At each label budget, both arms use the same stratified subset for a given seed: 116, 290 or 1,158 training patches. Training uses class-weighted cross-entropy, AdamW, encoder learning rate 1e-5, head learning rate 1e-3, cosine decay and 25 epochs. Best validation AUC selects the checkpoint. Test AUC, accuracy and balanced accuracy are reported. The NPZ preprocessing is a benchmark adaptation, not the original full-scan CT-FM preprocessing.
+At each label budget, both arms use the same stratified subset for a given seed: 116, 290 or 1,158 training patches. Training uses class-weighted cross-entropy, AdamW, encoder learning rate 1e-5, head learning rate 1e-3, cosine decay and 25 epochs. Best validation AUC selects the checkpoint. Test AUC, accuracy and balanced accuracy are reported. The paired summary uses three completed recorded seeds at each budget; unavailable weights limit independent re-evaluation. The NPZ preprocessing is a benchmark adaptation, not the original full-scan CT-FM preprocessing.
 
 ## Attribution
 

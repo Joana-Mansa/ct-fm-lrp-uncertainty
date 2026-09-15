@@ -4,20 +4,21 @@
 
 ## Matched label-efficiency runs
 
-Only seed/budget pairs with both pretrained and scratch records are averaged. Unpaired full-data seed 1 and seed 10 pretrained models are excluded from the paired summary. Lower-budget weights were not retained, so those scores are checked against saved records rather than rerun from checkpoints.
+The completed GitHub experiment records contain three paired seeds at all three budgets. The paired table below uses those records; the unpaired seed-10 model is excluded. Lower-budget weights and the full-data seed-1 scratch checkpoint were unavailable, so these entries are record-based rather than checkpoint-verified. Earlier server records differ and are preserved in the [server snapshot archive](../results/server-snapshot/README.md); they are not counted as extra runs.
 
 | Seed | Labels | Patches | CT-FM AUC | Scratch AUC | Difference |
 |---|---:|---:|---:|---:|---:|
 | 0 | 10% | 116 | 0.8283 | 0.8168 | +0.0116 |
 | 0 | 25% | 290 | 0.8472 | 0.8124 | +0.0348 |
 | 0 | 100% | 1158 | 0.8951 | 0.8733 | +0.0218 |
-| 1 | 10% | 116 | 0.8143 | 0.8053 | +0.0090 |
-| 1 | 25% | 290 | 0.9017 | 0.8711 | +0.0306 |
+| 1 | 10% | 116 | 0.8042 | 0.8053 | -0.0011 |
+| 1 | 25% | 290 | 0.8747 | 0.8707 | +0.0040 |
+| 1 | 100% | 1158 | 0.9111 | 0.9100 | +0.0011 |
 | 2 | 10% | 116 | 0.7936 | 0.7548 | +0.0388 |
 | 2 | 25% | 290 | 0.8552 | 0.8533 | +0.0018 |
 | 2 | 100% | 1158 | 0.8805 | 0.8860 | -0.0055 |
 
-Mean paired gains are +0.0198 (10%, three seeds), +0.0224 (25%, three seeds), and +0.0081 (100%, two seeds). All recorded 10% pairs favour CT-FM; the full-data seed-2 pair favours scratch. This does not establish universal superiority or a monotonic label-efficiency effect.
+Mean paired gains are **+0.0164 (10%), +0.0136 (25%), and +0.0058 (100%)**, three recorded pairs each. The 10% seed-1 and full-data seed-2 comparisons favour scratch. These small, variable differences do not establish universal superiority.
 
 ## Full-data checkpoint verification
 
@@ -34,7 +35,7 @@ All six available checkpoints were strictly loaded and evaluated on the same 310
 
 For the seed-0 paired AUC difference (+0.0218), a 2,000-replicate stratified bootstrap (seed 2026) gives a 95% percentile interval **[-0.0184, 0.0659]**. Resampling unit is the benchmark patch, not the patient. This interval does not capture training-seed variability or unknown patient dependence.
 
-AUC measures ranking, while accuracy uses a decision threshold. The pretrained seed-2 accuracy of 0.5839 despite AUC 0.8805 shows why both must be reported. The full-data seed-1 pretrained checkpoint exists, but its corresponding full training record and scratch counterpart are absent from the saved ablation JSON.
+AUC measures ranking, while accuracy uses a decision threshold. The pretrained seed-2 accuracy of 0.5839 despite AUC 0.8805 shows why both must be reported. The completed seed-1 record reports pretrained AUC 0.911077, while checkpoint re-evaluation gives 0.911141 (difference 0.000064). Accuracy and balanced accuracy agree. The cause of this small AUC discrepancy is not established. Its scratch record reports AUC 0.909997, accuracy 0.8226 and balanced accuracy 0.8420; the scratch checkpoint was unavailable. Keep recorded and recomputed scores distinct.
 
 ## Attribution and perturbation metrics
 
