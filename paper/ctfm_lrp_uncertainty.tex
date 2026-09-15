@@ -147,8 +147,17 @@ the gap against random is interpretable.
 \textbf{Stability} is the mean correlation between the map on a clean input and
 on a noisy copy ($\sigma=0.05$), noise the model itself ignores.
 
-\textbf{Uncertainty} is estimated by MC dropout over 20 passes, giving
-predictive entropy and mutual information, plus expected calibration error.
+\textbf{Uncertainty} is estimated two ways. MC dropout keeps dropout active at
+inference and averages 20 forward passes. A deep ensemble averages four
+separately trained models, taken from the seed replicates of Section~III-A at no
+additional training cost. Both give predictive entropy and mutual information,
+the latter being the share of entropy attributable to disagreement between
+samples or members, together with expected calibration error over 10
+equal-width bins.
+
+Sections~IV-B and IV-F are computed on the 64 volumes of the attribution
+analysis; Section~IV-E uses the full 310-volume test split, so its MC dropout
+figures differ.
 
 \section{Results}
 
@@ -200,7 +209,8 @@ more replicates.
 \subsection{Calibration}
 
 Expected calibration error under MC dropout is 0.145 with mean predictive
-entropy 0.085: the model is confident and less accurate than its confidence
+entropy 0.085 on the 64 volumes of the attribution analysis. Table~\ref{tab:ens}
+reports 0.127 for the same estimator on the full test split: the model is confident and less accurate than its confidence
 implies, the usual direction for a small fine-tuned network on an imbalanced
 task.
 
@@ -265,9 +275,8 @@ preferable.
 
 \subsection{Deep ensemble and MC dropout}
 
-Each full-label run stores a tagged checkpoint, so the seed replicates used for
-Section~III-A also serve as ensemble members. Four independently trained models
-were available, with individual test AUC 0.8951, 0.9093, 0.9111 and 0.8805.
+Four separately trained models were evaluated on the full 310-volume test
+split, with individual test AUC 0.8951, 0.9093, 0.9111 and 0.8805.
 
 \begin{table}[t]
 \caption{Uncertainty estimators on the test split}

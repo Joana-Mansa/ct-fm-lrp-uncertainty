@@ -113,8 +113,22 @@ noisy copy (sigma = 0.05).
 
 ### 3.4 Uncertainty
 
-MC dropout over 20 passes gives predictive entropy and mutual information.
-Expected calibration error is computed over 10 equal-width confidence bins.
+Two estimators.
+
+**MC dropout** keeps dropout active at inference and averages 20 forward passes.
+
+**Deep ensemble** averages the predictions of four separately trained models.
+Each full-label run stores a tagged checkpoint, so the seed replicates from
+Section 3.1 provide the members at no additional training cost.
+
+Both give predictive entropy and mutual information. Mutual information is the
+share of predictive entropy attributable to disagreement between samples or
+members. Expected calibration error is computed over 10 equal-width confidence
+bins.
+
+Section 4.2 and Section 4.6 use the 64 volumes of the attribution analysis.
+Section 4.5 uses the full 310-volume test split, so its MC dropout figures
+differ from Section 4.2.
 
 ---
 
@@ -167,7 +181,8 @@ from zero at 100% labels would need substantially more replicates.
 ![calibration](docs/figures/calibration.png)
 
 Expected calibration error 0.145 under MC dropout, with mean predictive entropy
-0.085.
+0.085, on the 64 volumes used for the attribution analysis. Section 4.5 reports
+0.127 for the same estimator on the full 310-volume test split.
 
 ### 4.3 Faithfulness
 
@@ -226,9 +241,8 @@ in the data.
 
 ### 4.5 Deep ensemble against MC dropout
 
-Each full-label run saves a tagged checkpoint, so the seed replicates that
-produce the error bands in Section 4.1 also serve as ensemble members. Four
-independently trained models were available.
+Four separately trained models, taken from the seed replicates of Section 4.1.
+Evaluated on the full 310-volume test split.
 
 ![ensemble](docs/figures/ensemble.png)
 
