@@ -38,8 +38,8 @@ def mc_dropout_predict(model, x, passes=20):
     samples = np.stack(samples)
     mean = samples.mean(0)
     ent = np.array([entropy(p) for p in mean])
-    # Mutual information separates what the model does not know from what the
-    # data does not determine. Low total entropy with high MI means disagreement.
+    # Mutual information measures disagreement among dropout passes here.
+    # It does not establish a physical decomposition of uncertainty.
     expected_ent = np.array([np.mean([entropy(s[i]) for s in samples])
                              for i in range(len(mean))])
     model.eval()
@@ -87,9 +87,5 @@ def expected_calibration_error(probs, labels, bins=10):
 
 def spearman(a, b):
     """Rank correlation, used to relate uncertainty to faithfulness."""
-    ra = np.argsort(np.argsort(a)).astype(float)
-    rb = np.argsort(np.argsort(b)).astype(float)
-    ra -= ra.mean()
-    rb -= rb.mean()
-    denom = np.sqrt((ra ** 2).sum() * (rb ** 2).sum())
-    return float((ra * rb).sum() / denom) if denom > 0 else float("nan")
+    from scipy.stats import spearmanr
+    return float(spearmanr(a, b).statistic)

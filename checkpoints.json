@@ -1,0 +1,18 @@
+{
+  "release": "verified-2026-09-15",
+  "usage": "Research benchmark checkpoints; not clinical models",
+  "artifacts": [
+    {
+      "path": "weights/ctfm_pretrained.pt",
+      "filename": "ctfm_pretrained.pt",
+      "sha256": "a658bdc96d1ff4cb85cbc44edf1a67256ffaa7adc709554714dc79133147b470",
+      "url": "https://github.com/Joana-Mansa/ct-fm-lrp-uncertainty/releases/download/verified-2026-09-15/ctfm_pretrained.pt"
+    },
+    {
+      "path": "weights/ctfm_scratch.pt",
+      "filename": "ctfm_scratch.pt",
+      "sha256": "278b61e43b0142f77d26e321ebf6108adcd484013a6d1d3ad7474ade4ca4a0f7",
+      "url": "https://github.com/Joana-Mansa/ct-fm-lrp-uncertainty/releases/download/verified-2026-09-15/ctfm_scratch.pt"
+    }
+  ]
+}

@@ -1,13 +1,11 @@
-"""NoduleMNIST3D loaders.
+"""NoduleMNIST3D 64-cube loaders with rating-derived binary labels.
 
-NoduleMNIST3D holds 3D chest CT patches centred on lung nodules from LIDC-IDRI,
-labelled benign or malignant. We use the 64^3 release because CT-FM downsamples
-by a factor of 16 and the 28^3 release is not divisible by it.
-
-The dataset is imbalanced, 863 benign against 295 malignant in the train split,
-so every result in this repository reports balanced accuracy and AUC alongside
-plain accuracy.
+The short class names follow MedMNIST; they do not imply biopsy confirmation.
+Training subsets are stratified and shared between matched comparison arms.
 """
+
+import os
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -16,7 +14,7 @@ from torch.utils.data import DataLoader, Dataset
 
 CLASSES = ["benign", "malignant"]
 SIZE = 64
-ROOT = "data/medmnist"
+ROOT = os.environ.get("MEDMNIST_ROOT", str(Path(__file__).resolve().parents[1] / "data" / "medmnist"))
 
 
 class Nodules(Dataset):
@@ -28,6 +26,7 @@ class Nodules(Dataset):
     """
 
     def __init__(self, split, root=ROOT, size=SIZE, fraction=1.0, seed=0):
+        Path(root).mkdir(parents=True, exist_ok=True)
         ds = NoduleMNIST3D(split=split, download=True, root=root, size=size)
         imgs = ds.imgs.astype(np.float32) / 127.5 - 1.0
         labels = ds.labels.astype(np.int64).squeeze(-1)

@@ -1,0 +1,252 @@
+{
+  "test_n": 310,
+  "test_class_counts": [
+    246,
+    64
+  ],
+  "checkpoints": {
+    "ctfm_pretrained.pt": {
+      "sha256": "a658bdc96d1ff4cb85cbc44edf1a67256ffaa7adc709554714dc79133147b470",
+      "metrics": {
+        "accuracy": 0.8225806451612904,
+        "balanced_accuracy": 0.8304115853658536,
+        "auc": 0.8950711382113821
+      },
+      "parameters": 77763042
+    },
+    "ctfm_pretrained_ens10.pt": {
+      "sha256": "fd16d7e1aacf418825ac980bbf4ca81c02ef5b3450a70b6e334c0246fd096bf7",
+      "metrics": {
+        "accuracy": 0.8774193548387097,
+        "balanced_accuracy": 0.8302845528455285,
+        "auc": 0.9092987804878049
+      },
+      "parameters": 77763042
+    },
+    "ctfm_pretrained_seed1.pt": {
+      "sha256": "08077aef89d12a5219ef44ad0078e5a606a7093501eae0b7f2466772a5917fee",
+      "metrics": {
+        "accuracy": 0.8516129032258064,
+        "balanced_accuracy": 0.7677845528455285,
+        "auc": 0.9111407520325203
+      },
+      "parameters": 77763042
+    },
+    "ctfm_pretrained_seed2.pt": {
+      "sha256": "3c500a4ab9f38ad2813080ca35bea69bb8bf22d31c4c173ee2ce0b2d0170420f",
+      "metrics": {
+        "accuracy": 0.5838709677419355,
+        "balanced_accuracy": 0.6915650406504066,
+        "auc": 0.8804623983739838
+      },
+      "parameters": 77763042
+    },
+    "ctfm_scratch.pt": {
+      "sha256": "278b61e43b0142f77d26e321ebf6108adcd484013a6d1d3ad7474ade4ca4a0f7",
+      "metrics": {
+        "accuracy": 0.7548387096774194,
+        "balanced_accuracy": 0.7877286585365854,
+        "auc": 0.8732850609756098
+      },
+      "parameters": 77763042
+    },
+    "ctfm_scratch_seed2.pt": {
+      "sha256": "3b3ad4c074aa296a3064c49cfadf4579a11ae9d8a000559c349d8349e912acea",
+      "metrics": {
+        "accuracy": 0.8129032258064516,
+        "balanced_accuracy": 0.7838541666666667,
+        "auc": 0.8859883130081301
+      },
+      "parameters": 77763042
+    }
+  },
+  "source_hashes": {
+    "explain.py": "92d449eced99953a96b8ebc302813bcbd9cb876d3fd2b1454ce44af9ad02bb10",
+    "ensemble.py": "f774f5bc0d9834a74006a522361417d8cbaf7c3bb0f548f7517bc115a93ea802",
+    "uncertainty.py": "df33abee71cc7841db57a19829bfa6d142b6d28a29e44d0653448c90e567af57",
+    "faithfulness.py": "02612af0e0101aad3f4b1fcfe0e66d43162b29ce0af57615c987f2287dc51106",
+    "train.py": "c596c307d3fac5a364de8c378361752adc4c6836ccfa1d07aae6fbace84c602e",
+    "data.py": "1b47da2c24cb8fb564f87c73e209d8c4d84c072d6d002603800bac5a91cddfc8",
+    "model.py": "d1ab655ac052ac22f08f8e50125b84f57a398975dc2d30755245532f67cc69fd",
+    "analyse.py": "1fd50d26ec89e6241f97377ddf8c0279e50eecae2b40fb06452685fdcec5d64a",
+    "figures.py": "3260082c875a9525b1f87effa2ec9ca9752fd4ababf1d3286390d29638481970",
+    "infer.py": "f5dd8d4232d2538930ed5ea58430116218c2cf8afe7b8af84158d7211700c369"
+  },
+  "module_types": {
+    "NoduleClassifier": 1,
+    "SegResEncoder": 1,
+    "Conv3d": 31,
+    "ModuleList": 1,
+    "ModuleDict": 5,
+    "Sequential": 5,
+    "SegResBlock": 13,
+    "BatchNorm3d": 26,
+    "ReLU": 26,
+    "Identity": 1,
+    "AdaptiveAvgPool3d": 1,
+    "LayerNorm": 1,
+    "Dropout": 1,
+    "Linear": 1
+  },
+  "bottleneck_shape": [
+    2,
+    512,
+    4,
+    4,
+    4
+  ],
+  "attribution_checks": {
+    "epsilon_plus_flat": {
+      "shape": [
+        2,
+        64,
+        64,
+        64
+      ],
+      "finite": true,
+      "signed_sum": [
+        -17.3984375,
+        0.603668212890625
+      ],
+      "selected_logit": [
+        0.022504020482301712,
+        2.3565170764923096
+      ],
+      "deletion_start": [
+        0.6448234915733337,
+        0.9967413544654846
+      ],
+      "insertion_end": [
+        0.6448234915733337,
+        0.9967413544654846
+      ]
+    },
+    "epsilon_gamma_box": {
+      "shape": [
+        2,
+        64,
+        64,
+        64
+      ],
+      "finite": true,
+      "signed_sum": [
+        -3.123046875,
+        0.21686553955078125
+      ],
+      "selected_logit": [
+        0.022504020482301712,
+        2.3565170764923096
+      ],
+      "deletion_start": [
+        0.6448234915733337,
+        0.9967413544654846
+      ],
+      "insertion_end": [
+        0.6448234915733337,
+        0.9967413544654846
+      ]
+    },
+    "epsilon_alpha2_beta1": {
+      "shape": [
+        2,
+        64,
+        64,
+        64
+      ],
+      "finite": true,
+      "signed_sum": [
+        -60.53125,
+        0.909454345703125
+      ],
+      "selected_logit": [
+        0.022504020482301712,
+        2.3565170764923096
+      ],
+      "deletion_start": [
+        0.6448234915733337,
+        0.9967413544654846
+      ],
+      "insertion_end": [
+        0.6448234915733337,
+        0.9967413544654846
+      ]
+    },
+    "gradcam": {
+      "shape": [
+        2,
+        64,
+        64,
+        64
+      ],
+      "finite": true,
+      "signed_sum": [
+        2537.150390625,
+        2087.33642578125
+      ],
+      "selected_logit": [
+        0.022504020482301712,
+        2.3565170764923096
+      ],
+      "deletion_start": [
+        0.6448234915733337,
+        0.9967413544654846
+      ],
+      "insertion_end": [
+        0.6448234915733337,
+        0.9967413544654846
+      ]
+    }
+  },
+  "ensemble_recomputed": {
+    "accuracy": 0.8548387096774194,
+    "balanced_accuracy": 0.8160569105691057,
+    "auc": 0.908473069105691,
+    "ece": 0.05045759774023487
+  },
+  "ensemble_recorded": {
+    "auc": 0.908473069105691,
+    "ece": 0.05045759774023487,
+    "mean_entropy": 0.32563111186027527,
+    "mean_mutual_information": 0.17244625091552734,
+    "mi_share_of_entropy": 0.5295754671096802
+  },
+  "saved_array_checks": {
+    "ece_recomputed": 0.14528072159737349,
+    "ece_recorded": 0.14528072159737349,
+    "correlations": {
+      "epsilon_plus_flat": {
+        "rho": 0.19038461538461537,
+        "p_value": 0.13184186444745266,
+        "aopc": 0.14658375849865024,
+        "recorded_rho": 0.19038461538461537
+      },
+      "epsilon_gamma_box": {
+        "rho": 0.1739468864468864,
+        "p_value": 0.16923887068203397,
+        "aopc": 0.14363167140811584,
+        "recorded_rho": 0.17394688644688644
+      },
+      "epsilon_alpha2_beta1": {
+        "rho": 0.22138278388278387,
+        "p_value": 0.07874041430952519,
+        "aopc": 0.149389792258944,
+        "recorded_rho": 0.22138278388278387
+      },
+      "gradcam": {
+        "rho": -0.124496336996337,
+        "p_value": 0.32700667964475694,
+        "aopc": 0.24867906598410627,
+        "recorded_rho": -0.124496336996337
+      }
+    }
+  },
+  "seed0_auc_difference_bootstrap": {
+    "replicates": 2000,
+    "seed": 2026,
+    "unit": "benchmark patch; patient identifiers not provided",
+    "ci95": [
+      -0.018424479166666678,
+      0.06587271341463416
+    ]
+  }
+}

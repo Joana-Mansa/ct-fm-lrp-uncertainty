@@ -1,14 +1,6 @@
-"""Run the trained model on a single CT volume and report everything it knows.
+"""Inspect one nodule benchmark prediction, head dropout and attribution maps.
 
-This is the end-to-end path a user would actually take: give it one volume, get
-back the prediction, how sure the model is, and what it looked at. Everything
-here is read off the trained checkpoint, so it needs no training run.
-
-The output figure carries three things side by side, because none of them is
-enough on its own. A prediction without an uncertainty is a number with no error
-bar. An uncertainty without an explanation says the model is unsure but not
-where. An explanation without either invites the reader to trust a heatmap for a
-call the model was never confident about.
+Labels are rating-derived; maps are exploratory and not clinically validated.
 """
 
 import argparse
@@ -47,7 +39,11 @@ def main():
     ap.add_argument("--method", default="epsilon_plus_flat")
     ap.add_argument("--mc-passes", type=int, default=30)
     ap.add_argument("--out", default="inference_example.png")
+    ap.add_argument("--seed", type=int, default=2026, help="sampling seed")
     args = ap.parse_args()
+    torch.set_num_threads(4)
+    torch.manual_seed(args.seed)
+    RESULTS.mkdir(parents=True, exist_ok=True)
 
     dev = "cuda" if torch.cuda.is_available() else "cpu"
     FIGS.mkdir(parents=True, exist_ok=True)
@@ -73,7 +69,10 @@ def main():
 
     report = {
         "index": args.index,
+        "seed": args.seed,
         "ground_truth": CLASSES[truth],
+        "label_basis": "radiologist-rating-derived benchmark label, not biopsy confirmation",
+        "attribution_status": "exploratory; architecture-specific LRP validation pending",
         "prediction": CLASSES[pred],
         "correct": bool(pred == truth),
         "probabilities": {CLASSES[i]: float(p) for i, p in enumerate(probs)},
@@ -99,11 +98,11 @@ def main():
     fig, axes = plt.subplots(1, 4, figsize=(11, 3.1))
 
     axes[0].imshow(vol[mid], cmap="gray")
-    axes[0].set_title(f"CT, central slice\ntruth: {CLASSES[truth]}", fontsize=9)
+    axes[0].set_title(f"CT, central slice\nrating label: {CLASSES[truth]}", fontsize=9)
 
     axes[1].imshow(vol[mid], cmap="gray")
     axes[1].imshow(lrp[mid], cmap="jet", alpha=0.45)
-    axes[1].set_title(f"LRP ({args.method})", fontsize=9)
+    axes[1].set_title(f"Zennit composite\n{args.method}", fontsize=9)
 
     axes[2].imshow(vol[mid], cmap="gray")
     axes[2].imshow(cam[mid], cmap="jet", alpha=0.45)

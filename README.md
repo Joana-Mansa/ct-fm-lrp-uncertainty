@@ -1,327 +1,82 @@
-# CT Foundation Model, Layer-wise Relevance Propagation and Uncertainty
+# CT Foundation Models, Attribution and Uncertainty
 
-Fine-tuning CT-FM, a self-supervised CT foundation model, for lung-nodule
-malignancy classification, with layer-wise relevance propagation attribution,
-faithfulness evaluation and uncertainty estimation.
+Does a pretrained CT encoder help with limited labels, and what can its attribution maps tell us? This project fine-tunes **CT-FM on 3D lung-nodule patches**, compares it with the same architecture trained from scratch, and examines attribution and uncertainty.
 
----
+**Main finding:** pretraining gives small average AUC gains in the available matched runs, with seed variation. The current attribution experiments do not establish faithful or clinically validated explanations.
 
-## 1. Goal
+[📊 Results](docs/results.md) · [▶ Run it](docs/reproduce.md) · [🔍 Verification](docs/verification.md) · [Technical report](paper/ctfm_lrp_uncertainty.pdf)
 
-Three questions:
+## What does the data look like?
 
-1. Does self-supervised CT pretraining improve downstream performance compared
-   with the same architecture trained from random initialisation, and does the
-   advantage grow when labels are scarce?
-2. Do the resulting attribution maps pass a faithfulness test, measured by
-   deletion, insertion and AOPC against a random-order baseline?
-3. Does attribution faithfulness vary with predictive uncertainty?
+![Two real nodule patches, each shown along three array axes](docs/figures/data_samples.png)
 
----
+These are **real NoduleMNIST3D test patches**, indices 0 and 7. The labels come from radiologist malignancy ratings, **not biopsy-confirmed diagnoses**. The [two sample volumes](examples/README.md) are included for inspection.
 
-## 2. Data and model
-
-### 2.1 NoduleMNIST3D
-
-| Property | Value |
+| Question | Answer |
 |---|---|
-| Source | [MedMNIST v2](https://medmnist.com/), derived from LIDC-IDRI, CC BY 4.0 |
-| Content | 3D chest CT patches centred on lung nodules |
-| Resolution | 64 x 64 x 64 |
-| Task | benign against malignant |
-| Train / val / test | 1,158 / 165 / 310 |
-| Train class balance | 863 benign, 295 malignant |
+| Data | NoduleMNIST3D, derived from LIDC-IDRI through MedMNIST v2 |
+| Task | Binary classification of rating-derived nodule labels |
+| Train / validation / test | 1,158 / 165 / 310 patches |
+| Input | Grayscale 64 × 64 × 64, scaled from uint8 to [-1, 1] |
+| Model | CT-FM encoder, pooling and classification head; **77,763,042 parameters** |
+| Project contribution | Downstream fine-tuning, matched scratch controls, attribution and uncertainty experiments |
 
-The classes are imbalanced approximately 3:1. Loss is class-weighted, balanced
-accuracy and AUC are reported alongside accuracy, and model selection uses
-validation AUC.
+The foundation model was pretrained by **Pai et al.**, not in this project. [Data and labels](docs/data.md) · [Model and methods](docs/methods.md)
 
-The 64^3 release is used because CT-FM downsamples by a factor of 16 and a 28^3
-volume is not divisible by the network stride.
+## What do the results support?
 
-### 2.2 CT-FM
+Mean test AUC across **matched seeds**, using the same label subset for both arms:
 
-| Property | Value |
-|---|---|
-| Checkpoint | [`project-lighter/ct_fm_feature_extractor`](https://huggingface.co/project-lighter/ct_fm_feature_extractor) |
-| Architecture | SegResNet, 87.2M parameters |
-| Pretraining | contrastive self-supervised learning on 148,000 CT scans from the Imaging Data Commons |
-| Reference | [arXiv:2501.09001](https://arxiv.org/abs/2501.09001) |
+| Training labels | Patches | Paired seeds | CT-FM | Scratch | Difference |
+|---|---:|---|---:|---:|---:|
+| 10% | 116 | 0, 1, 2 | 0.8121 | 0.7923 | +0.0198 |
+| 25% | 290 | 0, 1, 2 | 0.8680 | 0.8456 | +0.0224 |
+| 100% | 1,158 | 0, 2 | 0.8878 | 0.8796 | +0.0081 |
 
-The encoder returns a five-level feature pyramid. This implementation uses the
-bottleneck at 512 channels and 4^3 resolution, followed by global average
-pooling, LayerNorm and a linear head.
+![Matched-seed AUC and paired differences](docs/figures/ablation.png)
 
-### 2.3 Implementation notes
+The saved full-data seed-0 checkpoints reproduce **0.8951 AUC for CT-FM** and **0.8733 for scratch**. A patch-level bootstrap interval for their AUC difference is **[-0.0184, 0.0659]**, which includes zero. At full data, the seed-2 scratch model scores higher than its pretrained counterpart.
 
-Three issues affect correctness and produce no error message.
+| Explanation check | Observation | Interpretation |
+|---|---|---|
+| Mean-masking deletion, 64 patches | Random deletion lowers confidence faster than all four attribution methods | This protocol does not support a positive faithfulness claim |
+| Noise stability, first 16 patches | Grad-CAM correlation 0.924 | Smoothness and stability do not establish faithfulness |
+| Zennit composites | Finite maps, but no architecture-specific conservation validation | Treat these as exploratory attribution implementations |
+| Entropy versus AOPC, 64 patches | All four unadjusted p-values >0.05 | No clear association established in this sample |
 
-**Checkpoint loading.** The published checkpoint does not load into MONAI's
-`SegResNetDS`. Parameter names differ and `load_state_dict(strict=False)`
-matches 0 of 161 tensors without raising, leaving the network randomly
-initialised. Use the `lighter_zoo` loader.
+[All individual runs, calibration results and limitations](docs/results.md) include results that do not favour pretraining.
 
-**From-scratch control.** Constructing a separate SegResNet from an inferred
-configuration produced 19.9M parameters against the true 87.2M. The control arm
-in this repository is the loaded model with every parameter reinitialised, which
-keeps both arms architecturally identical.
+## Try it
 
-**Feature extraction.** Pooling the full SegResNet output gives the linear head
-two features, since the output is a 2-channel volume. With unnormalised features
-(standard deviation approximately 0.03) training loss remained at 6.37 with AUC
-0.50. Using the bottleneck with LayerNorm gives 0.51 and 0.78.
-
----
-
-## 3. Method
-
-### 3.1 Label-efficiency ablation
-
-Each configuration is trained twice, from CT-FM weights and from random
-initialisation, at 10%, 25% and 100% of the training labels. Subsets are
-stratified and drawn with a fixed seed so both arms use identical volumes. The
-encoder is fine-tuned at 1e-5 and the head at 1e-3.
-
-### 3.2 Attribution
-
-Four methods. Three LRP composites from
-[zennit](https://github.com/chr5tphr/zennit), whose layer-type registry covers
-`Conv3d` and the 3D pooling operators, plus Grad-CAM.
-
-| Method | Rule |
-|---|---|
-| `EpsilonPlusFlat` | positive contributions in the convolutional stack, flat rule at the input |
-| `EpsilonGammaBox` | gamma rule, box rule at the input for bounded inputs |
-| `EpsilonAlpha2Beta1` | positive and negative contributions at a 2:1 ratio |
-| Grad-CAM | gradient-weighted bottleneck activations, trilinearly upsampled |
-
-### 3.3 Faithfulness
-
-**Deletion** replaces the highest-ranked voxels with the dataset mean in
-increments and records the target-class probability. Lower area under the curve
-indicates a faster collapse and a more faithful map.
-
-**Insertion** restores the highest-ranked voxels onto a blurred volume.
-
-**AOPC** is the mean probability drop across deletion steps.
-
-Each map is accompanied by a random-order baseline, since absolute values depend
-on the model and data.
-
-**Stability** is the mean correlation between the map on a clean input and on a
-noisy copy (sigma = 0.05).
-
-### 3.4 Uncertainty
-
-MC dropout over 20 passes gives predictive entropy and mutual information.
-Expected calibration error is computed over 10 equal-width confidence bins.
-
----
-
-## 4. Results
-
-### 4.1 Label-efficiency ablation
-
-![ablation](docs/figures/ablation.png)
-
-Test AUC, seed 0:
-
-| Labels | n | CT-FM | Scratch | Gain |
-|---|---|---|---|---|
-| 10% | 116 | 0.8283 | 0.8168 | +0.0116 |
-| 25% | 290 | 0.8472 | 0.8124 | +0.0348 |
-| 100% | 1,158 | 0.8951 | 0.8733 | +0.0218 |
-
-At full supervision CT-FM reaches 0.895 AUC and 0.830 balanced accuracy, against
-0.873 and 0.788 from random initialisation.
-
-![training curves](docs/figures/training_curves.png)
-
-**Seed variance.** Across three seeds the mean gain is +0.0198 at 10% and
-+0.0263 at 25%, with overlapping ranges between the two arms at both budgets.
-Individual seed results at 10% include one in which the scratch arm scored
-higher. The per-seed values should be treated as noisy and the table above as a
-single draw.
-
-### 4.2 Calibration
-
-![calibration](docs/figures/calibration.png)
-
-Expected calibration error 0.145 under MC dropout, with mean predictive entropy
-0.085.
-
-### 4.3 Faithfulness
-
-![faithfulness](docs/figures/faithfulness.png)
-
-Evaluated on 64 test volumes.
-
-| Method | Deletion AUC | Insertion AUC | AOPC | AOPC over random | Stability |
-|---|---|---|---|---|---|
-| Random baseline | 0.587 | | 0.368 | | |
-| LRP eps+flat | 0.819 | 0.972 | 0.147 | -0.221 | 0.012 |
-| LRP eps-gamma-box | 0.822 | 0.972 | 0.144 | -0.224 | -0.015 |
-| LRP alpha2-beta1 | 0.816 | 0.973 | 0.149 | -0.219 | 0.220 |
-| Grad-CAM | 0.712 | 0.974 | 0.249 | -0.119 | 0.924 |
-
-A faithful map should give a lower deletion AUC than the random baseline. All
-four methods give higher values, so deleting the voxels they rank highest
-reduces the prediction less than deleting random voxels.
-
-The likely cause is the baseline. Random deletion distributes replaced voxels
-uniformly through the volume; at 5% this produces a volume unlike any CT scan,
-and the network's output collapses because the input is far from the training
-distribution. Attribution-guided deletion removes a compact contiguous region,
-which remains closer to a plausible scan. Under this protocol the random
-baseline benefits from distribution shift.
-
-Two consequences:
-
-- Deletion with mean-value masking does not discriminate between attribution
-  methods on this task. A manifold-preserving masking scheme, such as inpainting
-  the removed region, is required before the protocol can be used for ranking.
-- Insertion does not separate the methods either: all four reach 0.972 to 0.974.
-
-**Stability** does separate them. Grad-CAM maps are nearly invariant under input
-noise (0.924), while the LRP composites give 0.012, -0.015 and 0.220. Grad-CAM
-is computed at 4^3 and upsampled, which limits how much it can change. LRP
-resolves to input resolution and is correspondingly more sensitive.
-
-![attribution panel](docs/figures/attribution_panel.png)
-
-### 4.4 Single-volume inference
-
-`src/infer.py` reports prediction, uncertainty and attribution for one volume.
-
-![inference example](docs/figures/inference_example.png)
-
-```
-volume 3: truth benign, predicted benign at p=0.997
-  predictive entropy 0.0252, mutual information 0.0005
-  spread over 30 dropout passes: 0.0022
-```
-
-Mutual information near zero with low total entropy indicates agreement between
-dropout samples, so the residual uncertainty is attributable to the data rather
-than to disagreement within the model.
-
-### 4.5 Uncertainty against faithfulness
-
-![uncertainty vs faithfulness](docs/figures/uncertainty_vs_faithfulness.png)
-
-Spearman correlation between predictive entropy and per-sample AOPC:
-
-| Method | rho |
-|---|---|
-| LRP eps+flat | +0.190 |
-| LRP eps-gamma-box | +0.174 |
-| LRP alpha2-beta1 | +0.221 |
-| Grad-CAM | -0.124 |
-
-The three LRP composites agree with each other and give weakly positive
-correlations. Grad-CAM gives a weakly negative one. With 64 volumes none of
-these correlations is statistically significant.
-
----
-
-## 5. Reproducing
-
-### Requirements
-
-```
-torch  monai  medmnist  zennit  lighter-zoo  numpy  scipy  matplotlib
-```
-
-One GPU. The ablation takes about 14 minutes on an A100.
-
-On Volta hardware such as the V100, pin `torch==2.5.1+cu121`. Releases from 2.14
-ship an architecture list beginning at `sm_75`, and CUDA calls fail with
-`no kernel image is available for execution on the device`.
-
-### Pipeline
+Preview the included volumes on a CPU, without downloading weights or the full dataset:
 
 ```bash
-# 1. Ablation, both arms at three label budgets (14 min on an A100)
-PYTHONPATH=src python src/train.py --epochs 25 --batch-size 16 \
-    --fractions 0.1 0.25 1.0
-
-# 2. Seed replicates
-PYTHONPATH=src python src/train.py --epochs 25 --seed 1 --tag _seed1 \
-    --fractions 0.1 0.25 1.0
-
-# 3. Attribution, faithfulness and uncertainty
-PYTHONPATH=src python src/analyse.py --n 64 --batch 4
-
-# 4. Deep-ensemble uncertainty, using the tagged checkpoints from step 2
-PYTHONPATH=src python src/ensemble.py
-
-# 5. Single-volume inference
-PYTHONPATH=src python src/infer.py --index 3
-
-# 6. Figures
-PYTHONPATH=src python src/figures.py
+git clone https://github.com/Joana-Mansa/ct-fm-lrp-uncertainty.git
+cd ct-fm-lrp-uncertainty
+python -m venv .venv
+source .venv/bin/activate
+pip install numpy matplotlib
+python scripts/preview_data.py
 ```
 
----
+Use the [reproduction guide](docs/reproduce.md) for checked seed-0 weights, single-case inference and checkpoint verification.
 
-## 6. Repository layout
+## Scope and limits
 
-```
-src/data.py           NoduleMNIST3D loaders with stratified subsetting
-src/model.py          CT-FM encoder with a classification head
-src/train.py          fine-tuning and the label-efficiency ablation
-src/explain.py        zennit LRP composites and Grad-CAM
-src/faithfulness.py   deletion, insertion, AOPC and stability
-src/uncertainty.py    MC dropout, ensembles, calibration
-src/analyse.py        attribution and uncertainty analysis
-src/ensemble.py       deep-ensemble uncertainty
-src/infer.py          single-volume inference
-src/figures.py        figure generation
-results/              metrics as JSON, per-sample arrays as npz
-docs/figures/         figures
-paper/                IEEE-format technical report
-```
+- This is a small preprocessed patch benchmark, not whole-CT diagnosis or external clinical validation.
+- Patient/site identifiers are absent from the distributed arrays. Split independence and overlap with CT-FM pretraining data were not independently audited.
+- There are three paired seeds at 10% and 25%, but only two at full data. The full seed-1 scratch counterpart is missing.
+- Mean masking may introduce distribution shift; that explanation for the deletion results remains a hypothesis. LRP rule handling also needs architecture-specific validation.
+- MC dropout is applied to the classification head. Its uncertainty estimates do not establish clinical reliability.
 
----
+## Read further
 
-## 7. Limitations
+| Resource | What it contains |
+|---|---|
+| [Methods](docs/methods.md) | Architecture, matched comparisons, masking and uncertainty definitions |
+| [Full results](docs/results.md) | Per-seed performance, attribution and ensemble results |
+| [Verification record](docs/verification.md) | Six checkpoint evaluations, saved-array checks and remaining gaps |
+| [Technical report](paper/ctfm_lrp_uncertainty.pdf) | Self-contained research report, not a peer-reviewed publication |
+| [Source code](src/) | Training, inference and analysis scripts |
 
-**Seeds.** The headline table is a single seed. Across three seeds the ranges
-overlap at 10% and 25% of labels. More replicates are needed before the gains
-can be quoted as established.
-
-**Sample size.** The attribution analysis covers 64 volumes, which is sufficient
-to show that the deletion metric does not discriminate but not to resolve a weak
-correlation between uncertainty and faithfulness.
-
-**Deletion baseline.** Voxels are replaced with the dataset mean. A blurred or
-inpainted baseline would stay nearer the data distribution and may change the
-conclusion in Section 4.3.
-
-**Resolution.** Inputs are 64^3 patches. CT-FM was pretrained on whole scans, so
-the representation may not be used as intended at this scale.
-
-**Uncertainty method.** Section 4.2 and 4.5 use MC dropout. Deep ensembles are
-implemented in `src/ensemble.py` and use the tagged checkpoints from the seed
-replicates.
-
----
-
-## 8. References
-
-- Pai et al., *Vision Foundation Models for Computed Tomography*,
-  [arXiv:2501.09001](https://arxiv.org/abs/2501.09001)
-- Bach et al., *On Pixel-Wise Explanations for Non-Linear Classifier Decisions
-  by Layer-Wise Relevance Propagation*, PLoS ONE 10(7), 2015
-- Anders et al., *Software for Dataset-wide XAI* (zennit),
-  [arXiv:2106.13200](https://arxiv.org/abs/2106.13200)
-- Selvaraju et al., *Grad-CAM*, ICCV 2017
-- Samek et al., *Evaluating the Visualization of What a Deep Neural Network Has
-  Learned*, IEEE TNNLS 28(11), 2017
-- Salahuddin et al., *Transparency of deep neural networks for medical image
-  analysis: a review of interpretability methods*, Computers in Biology and
-  Medicine 140, 2022
-- Gal and Ghahramani, *Dropout as a Bayesian Approximation*, ICML 2016
-- Yang et al., *MedMNIST v2*, Scientific Data 10, 2023
-- Armato et al., *The Lung Image Database Consortium (LIDC) and Image Database
-  Resource Initiative (IDRI)*, Medical Physics 38(2), 2011
+Data: [MedMNIST v2](https://medmnist.com/), CC BY 4.0. Foundation model: [Pai et al., CT-FM](https://arxiv.org/abs/2501.09001), [official weights](https://huggingface.co/project-lighter/ct_fm_feature_extractor), Apache 2.0. Attribution library: [Zennit](https://github.com/chr5tphr/zennit).

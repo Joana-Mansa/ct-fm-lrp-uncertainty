@@ -1,0 +1,80 @@
+{
+  "dataset": "nodulemnist3d",
+  "license": "CC BY 4.0",
+  "source": "https://zenodo.org/records/10519652/files/nodulemnist3d_64.npz?download=1",
+  "md5": "c47c5b7d457bf6332200d2ea6d64ecd8",
+  "sha256": "ac9b99b9cc523f1cc0ad320b18eb4a63693e005c744c550e9606bfed75ecc41d",
+  "splits": {
+    "train": {
+      "images_shape": [
+        1158,
+        64,
+        64,
+        64
+      ],
+      "labels_shape": [
+        1158,
+        1
+      ],
+      "dtype": "uint8",
+      "min": 0,
+      "max": 255,
+      "counts": [
+        863,
+        295
+      ]
+    },
+    "val": {
+      "images_shape": [
+        165,
+        64,
+        64,
+        64
+      ],
+      "labels_shape": [
+        165,
+        1
+      ],
+      "dtype": "uint8",
+      "min": 0,
+      "max": 255,
+      "counts": [
+        123,
+        42
+      ]
+    },
+    "test": {
+      "images_shape": [
+        310,
+        64,
+        64,
+        64
+      ],
+      "labels_shape": [
+        310,
+        1
+      ],
+      "dtype": "uint8",
+      "min": 0,
+      "max": 255,
+      "counts": [
+        246,
+        64
+      ]
+    }
+  },
+  "examples": [
+    {
+      "split": "test",
+      "index": 0,
+      "label_id": 0,
+      "label": "benign"
+    },
+    {
+      "split": "test",
+      "index": 7,
+      "label_id": 1,
+      "label": "malignant"
+    }
+  ]
+}

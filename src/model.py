@@ -1,44 +1,22 @@
-"""The classifier built on the CT-FM encoder.
+"""Official CT-FM encoder with a downstream nodule classification head.
 
-CT-FM is a SegResNet pretrained with contrastive self-supervised learning on
-148,000 CT scans from the Imaging Data Commons. We keep its encoder, drop the
-decoder, and put a small classification head on the bottleneck.
-
-Three details worth recording, because each one cost time to find and each one
-would have produced a result that looked fine and meant nothing.
-
-The published checkpoint does not load into MONAI's SegResNetDS. The parameter
-names differ, `load_state_dict(strict=False)` matches zero tensors, and training
-proceeds on a randomly initialised network while the code looks correct. The
-`lighter_zoo` loader is the one that works.
-
-CT-FM downsamples by 16, so input side lengths must be divisible by 16. A 28^3
-volume raises an error, which is why the 64^3 release of the dataset is used.
-
-The encoder returns a five-level feature pyramid, and the full SegResNet output
-is a 2-channel volume at input resolution. Pooling that output gives a linear
-layer exactly two features to classify from. We take the bottleneck instead,
-512 channels at 4^3, which is the representation the self-supervised pretraining
-actually shaped.
+The deepest feature map is pooled; the same encoder architecture is used in
+the pretrained and randomly reinitialised comparison arms.
 """
+
+import os
+from pathlib import Path
 
 import torch
 import torch.nn as nn
 from lighter_zoo import SegResNet
 
 HF_ID = "project-lighter/ct_fm_feature_extractor"
-CACHE = "data/hf"
+CACHE = os.environ.get("CTFM_CACHE", str(Path(__file__).resolve().parents[1] / "data" / "hf"))
 
 
 def build_encoder(pretrained=True, cache_dir=CACHE):
-    """CT-FM encoder, with or without the pretrained weights.
-
-    The from-scratch arm reinitialises the loaded model rather than constructing
-    a second network. Building one from a guessed config gave an architecture
-    with 19.9M parameters against the real 87.2M, which would have made the
-    ablation compare two different models and report the gap as an effect of
-    pretraining.
-    """
+    """Load the official encoder, optionally reinitialising the same architecture."""
     model = SegResNet.from_pretrained(HF_ID, cache_dir=cache_dir)
     if pretrained:
         return model
@@ -70,10 +48,7 @@ class NoduleClassifier(nn.Module):
             pyramid = self.encoder(torch.zeros(1, 1, 64, 64, 64))
             n_feat = pyramid[-1].shape[1]
         self.pool = nn.AdaptiveAvgPool3d(1)
-        # The pooled CT-FM features have a standard deviation around 0.03. Fed
-        # straight into a linear layer the head learns nothing useful and the
-        # training loss sits an order of magnitude above chance. LayerNorm puts
-        # them on a scale the head can work with.
+        # Normalise pooled features before the dropout/classification head.
         self.norm = nn.LayerNorm(n_feat)
         self.drop = nn.Dropout(p_drop)
         self.fc = nn.Linear(n_feat, n_classes)
@@ -88,12 +63,7 @@ class NoduleClassifier(nn.Module):
         return self.fc(self.drop(self.norm(h)))
 
     def param_groups(self, encoder_lr, head_lr):
-        """Lower learning rate for the pretrained encoder than for the new head.
-
-        Fine-tuning 87M pretrained parameters at the head's learning rate walks
-        the representation away from what the self-supervised training produced,
-        which is the thing the ablation is supposed to measure.
-        """
+        """Separate encoder and head learning-rate groups."""
         enc = list(self.encoder.parameters())
         head = list(self.norm.parameters()) + list(self.fc.parameters())
         return [{"params": enc, "lr": encoder_lr},

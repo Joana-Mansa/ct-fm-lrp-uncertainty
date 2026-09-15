@@ -30,56 +30,45 @@ def load(name):
 
 
 def collect_ablation():
-    """Merge the base run with any seed replicates into {fraction: {arm: [auc]}}."""
-    out = {}
+    """Use only matched pretrained/scratch runs from the same seed and budget."""
+    pairs = {}
     for p in sorted(RESULTS.glob("ablation*.json")):
-        for r in json.loads(p.read_text())["runs"]:
-            arm = "CT-FM" if r["pretrained"] else "scratch"
-            out.setdefault(r["fraction"], {}).setdefault(arm, []).append(r["test"]["auc"])
+        document = json.loads(p.read_text())
+        for run in document["runs"]:
+            pairs.setdefault((document["seed"], run["fraction"]), {})[run["pretrained"]] = run["test"]["auc"]
+    out = {}
+    for (seed, fraction), arms in sorted(pairs.items()):
+        if True in arms and False in arms:
+            row = out.setdefault(fraction, {"CT-FM": [], "scratch": [], "seeds": []})
+            row["CT-FM"].append(arms[True])
+            row["scratch"].append(arms[False])
+            row["seeds"].append(seed)
     return out
 
 
 def fig_ablation():
     data = collect_ablation()
-    if not data:
-        return
+    fig, axes = plt.subplots(1, 2, figsize=(9, 3.5), layout="constrained")
     fracs = sorted(data)
-    fig, axes = plt.subplots(1, 2, figsize=(9, 3.2))
-
+    x = np.arange(len(fracs))
     for arm, colour in (("CT-FM", CTFM), ("scratch", SCRATCH)):
-        xs, mean, lo, hi = [], [], [], []
-        for f in fracs:
-            vals = data[f].get(arm, [])
-            if not vals:
-                continue
-            xs.append(f * 100)
-            mean.append(np.mean(vals))
-            lo.append(np.min(vals))
-            hi.append(np.max(vals))
-        axes[0].plot(xs, mean, "o-", color=colour, label=f"{arm} (n={len(data[fracs[0]].get(arm, []))})")
-        if len(data[fracs[0]].get(arm, [])) > 1:
-            axes[0].fill_between(xs, lo, hi, color=colour, alpha=0.18)
-    axes[0].set_xscale("log")
-    axes[0].set_xticks([10, 25, 100])
-    axes[0].get_xaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
-    axes[0].set_xlabel("percentage of training labels")
-    axes[0].set_ylabel("test AUC")
-    axes[0].set_title("Label efficiency")
-    axes[0].legend(fontsize=7)
-
-    gains, labels = [], []
-    for f in fracs:
-        if "CT-FM" in data[f] and "scratch" in data[f]:
-            gains.append(np.mean(data[f]["CT-FM"]) - np.mean(data[f]["scratch"]))
-            labels.append(f"{int(f * 100)}%")
-    colours = [CTFM if g > 0 else SCRATCH for g in gains]
-    axes[1].bar(labels, gains, color=colours)
-    axes[1].axhline(0, color="#444", linewidth=0.8)
-    axes[1].set_ylabel("AUC gain from pretraining")
+        means = [np.mean(data[f][arm]) for f in fracs]
+        axes[0].plot(x, means, "o-", color=colour, label=arm)
+        for i, f in enumerate(fracs):
+            axes[0].scatter(np.full(len(data[f][arm]), i), data[f][arm], color=colour, alpha=.5, s=15)
+    labels = [f"{int(f*100)}%\n{len(data[f]['seeds'])} paired seeds" for f in fracs]
+    axes[0].set_xticks(x, labels)
+    axes[0].set_ylabel("Test AUC")
+    axes[0].set_title("Matched-seed label efficiency")
+    axes[0].legend()
+    gains = [np.mean(np.array(data[f]["CT-FM"]) - np.array(data[f]["scratch"])) for f in fracs]
+    axes[1].bar(x, gains, color=CTFM)
+    axes[1].set_xticks(x, labels)
+    axes[1].axhline(0, color="gray", linewidth=.8)
+    axes[1].set_ylabel("Mean paired AUC difference")
     axes[1].set_title("CT-FM minus scratch")
-    plt.tight_layout()
-    plt.savefig(FIGS / "ablation.png")
-    plt.close()
+    fig.savefig(FIGS / "ablation.png")
+    plt.close(fig)
 
 
 def fig_faithfulness():
@@ -98,7 +87,7 @@ def fig_faithfulness():
     axes[0].set_xticks(x)
     axes[0].set_xticklabels([NAMES[m] for m in methods], rotation=20, ha="right", fontsize=7)
     axes[0].set_ylabel("deletion AUC")
-    axes[0].set_title("Deletion, lower is more faithful")
+    axes[0].set_title("Deletion under mean masking")
     axes[0].legend(fontsize=7)
 
     axes[1].bar(x, [f[m]["aopc_over_random"] for m in methods], color=CTFM)
@@ -106,7 +95,7 @@ def fig_faithfulness():
     axes[1].set_xticks(x)
     axes[1].set_xticklabels([NAMES[m] for m in methods], rotation=20, ha="right", fontsize=7)
     axes[1].set_ylabel("AOPC over random")
-    axes[1].set_title("Faithfulness above chance")
+    axes[1].set_title("AOPC difference from random")
     plt.tight_layout()
     plt.savefig(FIGS / "faithfulness.png")
     plt.close()

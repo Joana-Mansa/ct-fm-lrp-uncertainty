@@ -1,13 +1,7 @@
-"""Fine-tune CT-FM on lung nodule malignancy, and run the label-efficiency ablation.
+"""Fine-tune CT-FM and compare matched randomly initialised controls.
 
-The ablation is the point of this script. Self-supervised pretraining is only
-worth claiming if it beats the same architecture trained from scratch, and the
-place it should show most is where labels are scarce. So every configuration is
-trained twice, once from CT-FM weights and once from random initialisation, at
-several fractions of the training set.
-
-Because the dataset is imbalanced we track balanced accuracy and AUC. Model
-selection uses validation AUC.
+Validation AUC selects checkpoints; test accuracy, balanced accuracy and AUC
+are recorded for each seed and label budget.
 """
 
 import argparse

@@ -1,21 +1,24 @@
 {
-  "index": 3,
+  "index": 0,
+  "seed": 2026,
   "ground_truth": "benign",
-  "prediction": "benign",
-  "correct": true,
+  "label_basis": "radiologist-rating-derived benchmark label, not biopsy confirmation",
+  "attribution_status": "exploratory; architecture-specific LRP validation pending",
+  "prediction": "malignant",
+  "correct": false,
   "probabilities": {
-    "benign": 0.9967359900474548,
-    "malignant": 0.003263958729803562
+    "benign": 0.3547273576259613,
+    "malignant": 0.6452726721763611
   },
   "mc_dropout": {
-    "passes": 30,
+    "passes": 20,
     "mean_probabilities": {
-      "benign": 0.9961607456207275,
-      "malignant": 0.003839225275442004
+      "benign": 0.36553171277046204,
+      "malignant": 0.6344682574272156
     },
-    "predictive_entropy": 0.025187507271766663,
-    "mutual_information": 0.000514018535614013,
-    "max_std_over_passes": 0.0022237563971430063
+    "predictive_entropy": 0.656534731388092,
+    "mutual_information": 0.01734753102064135,
+    "max_std_over_passes": 0.08803081512451172
   },
   "attribution_method": "epsilon_plus_flat"
 }
