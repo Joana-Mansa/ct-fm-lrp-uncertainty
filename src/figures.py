@@ -205,8 +205,42 @@ def fig_training_curves():
     plt.close()
 
 
+def fig_ensemble():
+    d = load("ensemble.json")
+    p = RESULTS / "ensemble_per_sample.npz"
+    if not d or not p.exists():
+        return
+    z = np.load(p)
+    ens, mc = d["ensemble"], d["mc_dropout_single_model"]
+
+    fig, axes = plt.subplots(1, 3, figsize=(10.5, 3.1))
+
+    labels = ["MC dropout\n(1 model)", f"deep ensemble\n({d['n_members']} members)"]
+    axes[0].bar(labels, [mc["ece"], ens["ece"]], color=[SCRATCH, CTFM])
+    axes[0].set_ylabel("expected calibration error")
+    axes[0].set_title("Calibration, lower is better")
+
+    axes[1].bar(labels, [mc["mi_share_of_entropy"], ens["mi_share_of_entropy"]],
+                color=[SCRATCH, CTFM])
+    axes[1].set_ylabel("mutual information / entropy")
+    axes[1].set_title("Share of uncertainty from\nmodel disagreement")
+
+    axes[2].hist(z["mc_entropy"], bins=30, alpha=0.6, color=SCRATCH,
+                 label="MC dropout")
+    axes[2].hist(z["ensemble_entropy"], bins=30, alpha=0.6, color=CTFM,
+                 label="deep ensemble")
+    axes[2].set_xlabel("predictive entropy")
+    axes[2].set_ylabel("test volumes")
+    axes[2].set_title("Entropy distribution")
+    axes[2].legend(fontsize=7)
+    plt.tight_layout()
+    plt.savefig(FIGS / "ensemble.png")
+    plt.close()
+
+
 if __name__ == "__main__":
     for fn in [fig_ablation, fig_faithfulness, fig_uncertainty_vs_faithfulness,
-               fig_qualitative, fig_calibration, fig_training_curves]:
+               fig_qualitative, fig_calibration, fig_training_curves,
+               fig_ensemble]:
         fn()
         print(f"built {fn.__name__}")
