@@ -23,6 +23,25 @@ These are **real NoduleMNIST3D test patches**, indices 0 and 7. The labels come 
 
 The foundation model was pretrained by **Pai et al.**, not in this project. [Data and labels](docs/data.md) · [Model and methods](docs/methods.md)
 
+## How does the model work?
+
+![Architecture of the trained models, with feature sizes and output heads](docs/figures/architecture.svg)
+
+A 3D residual encoder compresses the patch into **512 features**, followed by normalisation, dropout and a two-class head. Both encoder and head are trained. The pretrained and scratch arms share this architecture; Grad-CAM, Zennit maps and MC dropout are applied after training.
+
+## What is optimised during training?
+
+| Setting | Implementation |
+|---|---|
+| Loss | Class-weighted cross-entropy, giving the less common label more weight |
+| Optimiser | AdamW; encoder learning rate 1e-5, head learning rate 1e-3 |
+| Schedule | 25 epochs with cosine learning-rate decay |
+| Checkpoint choice | Highest validation ROC AUC, not lowest training loss |
+
+![Seed-0 full-data training losses and validation AUC for pretrained and scratch models](docs/figures/learning_curves.svg)
+
+These are the **seed-0, full-data** histories. Dots mark the selected checkpoints: epoch 11 for CT-FM and epoch 6 for scratch. Falling training loss does not guarantee improving validation performance. [Layer details, weighted-loss equation and interpretation](docs/architecture.md).
+
 ## What do the results support?
 
 Mean test AUC across **three matched seeds in the completed experiment records**, using the same label subset for both arms. Lower-budget scores and full-data scratch seed 1 are record-based; their checkpoints were unavailable for re-evaluation:
@@ -73,6 +92,7 @@ Use the [reproduction guide](docs/reproduce.md) for checked seed-0 weights, sing
 
 | Resource | What it contains |
 |---|---|
+| [Architecture and losses](docs/architecture.md) | Layer shapes, training objectives and learning curves |
 | [Methods](docs/methods.md) | Architecture, matched comparisons, masking and uncertainty definitions |
 | [Full results](docs/results.md) | Per-seed performance, attribution and ensemble results |
 | [Verification record](docs/verification.md) | Six checkpoint evaluations, saved-array checks and remaining gaps |

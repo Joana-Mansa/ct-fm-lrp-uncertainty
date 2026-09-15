@@ -1,0 +1,69 @@
+{
+  "input_shape": [
+    1,
+    1,
+    64,
+    64,
+    64
+  ],
+  "encoder_feature_shapes": [
+    [
+      1,
+      32,
+      64,
+      64,
+      64
+    ],
+    [
+      1,
+      64,
+      32,
+      32,
+      32
+    ],
+    [
+      1,
+      128,
+      16,
+      16,
+      16
+    ],
+    [
+      1,
+      256,
+      8,
+      8,
+      8
+    ],
+    [
+      1,
+      512,
+      4,
+      4,
+      4
+    ]
+  ],
+  "residual_blocks_per_stage": [
+    1,
+    2,
+    2,
+    4,
+    4
+  ],
+  "encoder_normalization": "BatchNorm3d",
+  "parameters": 77763042,
+  "encoder_parameters": 77760992,
+  "head_parameters": 2050,
+  "source_sha256": {
+    "explain.py": "92d449eced99953a96b8ebc302813bcbd9cb876d3fd2b1454ce44af9ad02bb10",
+    "ensemble.py": "f774f5bc0d9834a74006a522361417d8cbaf7c3bb0f548f7517bc115a93ea802",
+    "uncertainty.py": "7cab3659a7a406774d97e46764d7689882f39aefeb548e7c440da1e39ef33f5d",
+    "faithfulness.py": "02612af0e0101aad3f4b1fcfe0e66d43162b29ce0af57615c987f2287dc51106",
+    "train.py": "c7b2bbf8f1c8a9ef174c5ef719cb2d09f36311228e2b913d77231e667c983d02",
+    "data.py": "e3f5f51e00f9e704c83d207d81819c87132a83bb98812d883414b20284456e77",
+    "model.py": "6a3bb2b71ed4947f52b113d20d3d9354ad98f60454114a288debbea6a3cc311a",
+    "analyse.py": "1fd50d26ec89e6241f97377ddf8c0279e50eecae2b40fb06452685fdcec5d64a",
+    "figures.py": "aeaa01e32d497318627f994eccfcecb18ef7792327c9b5d2b599fae5280e6b40",
+    "infer.py": "db66bfdde222023dbad81cedd04abd0542bdd8dfc3cb37e093d5bf92d215c2da"
+  }
+}
