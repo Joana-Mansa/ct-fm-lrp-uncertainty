@@ -28,11 +28,11 @@ recording the change in predicted probability. We apply the protocol to CT-FM,
 a SegResNet pretrained by contrastive self-supervised learning on 148{,}000 CT
 scans, fine-tuned for lung-nodule malignancy classification on volumetric chest
 CT, and compare three layer-wise relevance propagation composites against
-Grad-CAM. Two results are reported. First, CT-FM initialisation improves test
-AUC over an architecturally identical randomly-initialised control at every
-label budget, reaching 0.895 against 0.873 at full supervision; across three
-seeds the mean gain is positive at each budget with overlapping ranges at 10\%
-and 25\% of labels. Second, none of the four attribution methods achieved a
+Grad-CAM. Two results are reported. First, over three paired seeds CT-FM
+initialisation gives a positive mean AUC gain over an architecturally identical
+randomly-initialised control at every label budget, though the gain is smaller
+than the between-seed spread at 10\% and 100\% of labels and the mean gain at
+full supervision is $+0.006$. Second, none of the four attribution methods achieved a
 lower deletion AUC than a random-order baseline, scoring 0.12 to 0.22 lower on
 AOPC. We attribute this to the masking scheme: random deletion distributes
 replaced voxels uniformly through the volume and moves the input away from the
@@ -72,8 +72,8 @@ Our contributions are:
 
 \begin{enumerate}
 \item A label-efficiency ablation against an architecturally identical
-      from-scratch control at 10\%, 25\% and 100\% of labels, with a seed
-      replicate that identifies which gains survive.
+      from-scratch control at 10\%, 25\% and 100\% of labels over three paired
+      seeds, reporting the between-seed spread alongside the mean.
 \item A faithfulness evaluation of three LRP composites and Grad-CAM on 3D CT
       against a random-order deletion baseline, with an analysis of the
       resulting negative outcome.
@@ -155,35 +155,47 @@ predictive entropy and mutual information, plus expected calibration error.
 \subsection{Label-efficiency ablation}
 
 \begin{table}[t]
-\caption{Label-efficiency ablation, test AUC (seed 0)}
+\caption{Label-efficiency ablation over three paired seeds}
 \label{tab:ablation}
 \centering
-\begin{tabular}{lrccc}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lccccc}
 \toprule
-Labels & $n$ & CT-FM & Scratch & Gain \\
+Labels & CT-FM & Scr. & Mean gain & Gain range & Wins \\
 \midrule
-10\%  & 116   & 0.8283 & 0.8168 & $+0.0116$ \\
-25\%  & 290   & 0.8472 & 0.8124 & $+0.0348$ \\
-100\% & 1{,}158 & \textbf{0.8951} & 0.8733 & $+0.0218$ \\
+10\%  & 0.809 & 0.792 & $+0.016$ & $[-0.001, +0.039]$ & 2/3 \\
+25\%  & 0.859 & 0.846 & $+0.014$ & $[+0.002, +0.035]$ & 3/3 \\
+100\% & 0.896 & 0.890 & $+0.006$ & $[-0.006, +0.022]$ & 2/3 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \begin{figure}[t]
 \centerline{\includegraphics[width=\columnwidth]{../docs/figures/ablation.png}}
-\caption{Label efficiency and the AUC gain attributable to pretraining.}
+\caption{Label efficiency and the mean AUC gain from pretraining. Shaded bands
+span the minimum and maximum over three seeds.}
 \label{fig:ablation}
 \end{figure}
 
-CT-FM initialisation wins at every budget (Table~\ref{tab:ablation},
-Fig.~\ref{fig:ablation}), reaching 0.895 AUC and 0.830 balanced accuracy at full
-supervision against 0.873 and 0.788 from scratch.
+Three paired seeds were run at each label budget, with both arms of a seed using
+identical data subsets. Table~\ref{tab:ablation} and Fig.~\ref{fig:ablation}
+report the results.
 
-Across three seeds the mean gain is $+0.0198$ at 10\% and $+0.0263$ at 25\% of
-labels, with overlapping ranges between the two arms at both budgets. One seed
-at 10\% gave a higher score for the randomly-initialised arm. Table
-\ref{tab:ablation} should be read as a single draw, and additional replicates
-are required before the gains can be quoted as established.
+The mean gain from pretraining is positive at all three budgets. At 10\% and
+100\% of labels it is smaller than the spread between seeds, and one seed at
+each of those budgets favoured the randomly-initialised arm. Only the 25\%
+budget places CT-FM ahead in every seed, with a mean gain of $+0.0136$.
+
+The largest single-seed gain at full supervision, $+0.0218$, is approximately
+four times the three-seed mean of $+0.0058$. A single run of this experiment can
+therefore misstate the effect by a wide margin, which is relevant when
+comparable ablations are reported from one seed.
+
+With three replicates these data support a small positive effect of
+self-supervised pretraining on this task and do not resolve its magnitude.
+Separating $+0.006$ from zero at full supervision would require substantially
+more replicates.
 
 \subsection{Calibration}
 
@@ -307,8 +319,9 @@ segmentation by Salahuddin et al.~\cite{salahuddin2024renal}.
 
 \section{Limitations}
 
-Table~\ref{tab:ablation} reports a single seed, and across three seeds the
-ranges overlap at 10\% and 25\% of labels. The explanation analysis covers 64
+The ablation uses three paired seeds. The mean gain is smaller than the
+between-seed spread at 10\% and 100\% of labels, so the effect size is not
+resolved. The explanation analysis covers 64
 volumes, which is sufficient to show that the deletion metric does not
 discriminate but not to resolve a weak correlation. The deletion baseline
 replaces voxels with the dataset mean; a blurred or inpainted baseline would
@@ -321,8 +334,9 @@ ordering, subsampling and dropout only.
 
 \section{Conclusion}
 
-Self-supervised CT pretraining improved downstream nodule classification at
-every label budget, with overlapping seed ranges at the two lower budgets. The
+Self-supervised CT pretraining gave a positive mean AUC gain at every label
+budget over three paired seeds, with the gain smaller than the between-seed
+spread at two of the three budgets. The
 standard deletion protocol ranked all four attribution methods below a
 random-order baseline. We attribute this to distribution shift introduced by
 uniform voxel masking. Faithfulness metrics developed for 2D natural images
