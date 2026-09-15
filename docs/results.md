@@ -20,6 +20,8 @@ The completed GitHub experiment records contain three paired seeds at all three 
 
 Mean paired gains are **+0.0164 (10%), +0.0136 (25%), and +0.0058 (100%)**, three recorded pairs each. The 10% seed-1 and full-data seed-2 comparisons favour scratch. These small, variable differences do not establish universal superiority.
 
+![Matched-seed AUC and paired differences](figures/ablation.png)
+
 ## Full-data checkpoint verification
 
 All six available checkpoints were strictly loaded and evaluated on the same 310 test patches (246 label 0, 64 label 1).

@@ -1,83 +1,88 @@
 # CT Foundation Models, Attribution and Uncertainty
 
-Does a pretrained CT encoder help with limited labels, and what can its attribution maps tell us? This project fine-tunes **CT-FM on 3D lung-nodule patches**, compares it with the same architecture trained from scratch, and examines attribution and uncertainty.
+This project studies whether **CT-FM, an existing model pretrained on CT scans, helps classify 3D lung-nodule patches when labels are limited**. It compares fine-tuning with training the same architecture from scratch, then examines attribution maps and prediction uncertainty.
 
-**Main finding:** pretraining gives small average AUC gains in the available matched runs, with seed variation. The current attribution experiments do not establish faithful or clinically validated explanations.
+**Main finding:** pretraining gives small, variable average gains in the recorded experiments. The attribution maps are useful to inspect, but their faithfulness has not been established.
 
-[📊 Results](docs/results.md) · [▶ Run it](docs/reproduce.md) · [🔍 Verification](docs/verification.md) · [Technical report](paper/ctfm_lrp_uncertainty.pdf)
+[Attribution gallery](docs/attribution.md) · [Architecture and losses](docs/architecture.md) · [Full results](docs/results.md) · [Run it](docs/reproduce.md) · [Verification](docs/verification.md)
+
+## Data and task
+
+| Item | Description |
+|---|---|
+| Dataset | NoduleMNIST3D, derived from LIDC-IDRI through MedMNIST v2 |
+| Input | A grayscale 64 × 64 × 64 CT patch centred on a lung nodule |
+| Target | Two categories derived from radiologists' malignancy ratings, **not biopsy-confirmed diagnoses** |
+| Train / validation / test | 1,158 / 165 / 310 patches |
+| This project's contribution | Downstream fine-tuning, matched scratch controls, attribution and uncertainty experiments |
+
+CT-FM pretraining belongs to **Pai et al.** This project adapts their encoder to the nodule task. [Data provenance and label definitions](docs/data.md).
 
 ## Attribution maps: Grad-CAM and Zennit LRP
 
-![Real CT inputs beside Grad-CAM and all three Zennit LRP composite maps, with test IDs, labels and predictions](docs/figures/attribution_preview.png)
+An attribution map assigns values to parts of the input to help inspect a model's prediction. **Grad-CAM** uses gradients and deep feature maps; **Zennit** supplies the three layer-wise relevance propagation (LRP) composites compared here.
 
-**Read left to right:** the CT input, Grad-CAM, EpsilonPlusFlat, EpsilonGammaBox and EpsilonAlpha2Beta1. These are saved model outputs for test cases **257 and 180**, the first two cases of the original analysis subset. All columns show the same slice and explain the predicted class. Label 0 means lower malignancy ratings; label 1 means higher ratings.
+![Real CT inputs beside Grad-CAM and three Zennit LRP maps, with test IDs, labels and predictions](docs/figures/attribution_preview.png)
 
-**Colours:** brighter colours indicate higher values within each normalised map. Each method/volume was scaled separately, so colour intensity cannot compare absolute importance across methods or distinguish positive from negative evidence. These exploratory maps are not segmentation masks or validated clinical explanations.
+**Read left to right:** CT input, Grad-CAM, EpsilonPlusFlat, EpsilonGammaBox and EpsilonAlpha2Beta1. These are saved outputs for test cases **257 and 180**, the first two cases of the original analysis subset. Each row shows the same slice and explains the predicted class. Label 0 means lower malignancy ratings; label 1 means higher ratings.
 
-[Four-case gallery and how to interpret the maps](docs/attribution.md) · [Saved arrays](results/qualitative.npz) · [Verified example identities](results/attribution_examples.json)
+**Colours are relative:** brighter means higher within that normalised map. Each map was scaled separately, so colours cannot compare absolute importance across methods or distinguish positive from negative evidence. These are exploratory explanations, not segmentation masks.
 
-## What does the data look like?
+[Four-case gallery, a misclassified example and interpretation guide](docs/attribution.md) · [Saved maps](results/qualitative.npz) · [Verified case identities](results/attribution_examples.json)
 
-![Two real nodule patches, each shown along three array axes](docs/figures/data_samples.png)
+<details>
+<summary>Inspect additional real input volumes in three views</summary>
 
-These are **real NoduleMNIST3D test patches**, indices 0 and 7. The labels come from radiologist malignancy ratings, **not biopsy-confirmed diagnoses**. The [two sample volumes](examples/README.md) are included for inspection.
+![Real test patches 0 and 7, displayed along three array axes](docs/figures/data_samples.png)
 
-| Question | Answer |
-|---|---|
-| Data | NoduleMNIST3D, derived from LIDC-IDRI through MedMNIST v2 |
-| Task | Binary classification of rating-derived nodule labels |
-| Train / validation / test | 1,158 / 165 / 310 patches |
-| Input | Grayscale 64 × 64 × 64, scaled from uint8 to [-1, 1] |
-| Model | CT-FM encoder, pooling and classification head; **77,763,042 parameters** |
-| Project contribution | Downstream fine-tuning, matched scratch controls, attribution and uncertainty experiments |
+These are the bundled input examples, separate from the attribution cases above. [Download and inspect the sample volumes](examples/README.md).
 
-The foundation model was pretrained by **Pai et al.**, not in this project. [Data and labels](docs/data.md) · [Model and methods](docs/methods.md)
+</details>
 
-## How does the model work?
+## Model architecture
 
-![Architecture of the trained models, with feature sizes and output heads](docs/figures/architecture.svg)
+![CT-FM encoder stages, feature sizes and classification head](docs/figures/architecture.svg)
 
-A 3D residual encoder compresses the patch into **512 features**, followed by normalisation, dropout and a two-class head. Both encoder and head are trained. The pretrained and scratch arms share this architecture; Grad-CAM, Zennit maps and MC dropout are applied after training.
+The encoder converts the patch into **512 learned features**. Normalisation, dropout and a two-class classification head turn these into a prediction. The complete model has **77,763,042 parameters**.
 
-## What is optimised during training?
+Both encoder and head are trained. The pretrained and scratch arms use the same architecture and label subset. Attribution and uncertainty analyses happen after training. [Layer-by-layer details](docs/architecture.md).
+
+## Training objective and learning curves
 
 | Setting | Implementation |
 |---|---|
-| Loss | Class-weighted cross-entropy, giving the less common label more weight |
+| Loss | Class-weighted cross-entropy: penalise wrong predictions, with more weight on the less common label |
 | Optimiser | AdamW; encoder learning rate 1e-5, head learning rate 1e-3 |
 | Schedule | 25 epochs with cosine learning-rate decay |
-| Checkpoint choice | Highest validation ROC AUC, not lowest training loss |
+| Checkpoint selection | Highest validation ROC AUC |
+
+**ROC AUC measures how well the model ranks the two classes across decision thresholds.** Cross-entropy trains the model; validation AUC selects the saved checkpoint.
 
 ![Seed-0 full-data training losses and validation AUC for pretrained and scratch models](docs/figures/learning_curves.svg)
 
-These are the **seed-0, full-data** histories. Dots mark the selected checkpoints: epoch 11 for CT-FM and epoch 6 for scratch. Falling training loss does not guarantee improving validation performance. [Layer details, weighted-loss equation and interpretation](docs/architecture.md).
+These curves come from the **seed-0, full-data** logs. Dots mark the selected checkpoints: epoch 11 for CT-FM and epoch 6 for scratch. Training loss keeps falling while validation performance fluctuates. [Loss equation and curve interpretation](docs/architecture.md).
 
-## What do the results support?
+## Results and what they mean
 
-Mean test AUC across **three matched seeds in the completed experiment records**, using the same label subset for both arms. Lower-budget scores and full-data scratch seed 1 are record-based; their checkpoints were unavailable for re-evaluation:
+Mean test ROC AUC over **three matched seeds in the completed experiment records**:
 
-| Training labels | Patches | Paired seeds | CT-FM | Scratch | Difference |
-|---|---:|---|---:|---:|---:|
-| 10% | 116 | 0, 1, 2 | 0.8087 | 0.7923 | +0.0164 |
-| 25% | 290 | 0, 1, 2 | 0.8591 | 0.8455 | +0.0136 |
-| 100% | 1,158 | 0, 1, 2 | 0.8955 | 0.8898 | +0.0058 |
+| Training labels | Patches | CT-FM | Scratch | Difference |
+|---|---:|---:|---:|---:|
+| 10% | 116 | 0.8087 | 0.7923 | +0.0164 |
+| 25% | 290 | 0.8591 | 0.8455 | +0.0136 |
+| 100% | 1,158 | 0.8955 | 0.8898 | +0.0058 |
 
-![Matched-seed AUC and paired differences](docs/figures/ablation.png)
+**Classification:** re-evaluating the full-data seed-0 checkpoints gives **0.8951 AUC for CT-FM** and **0.8733 for scratch**. The 95% patch-bootstrap interval for their difference is **[-0.0184, 0.0659]**, which includes zero. Some individual runs favour scratch.
 
-The saved full-data seed-0 checkpoints reproduce **0.8951 AUC for CT-FM** and **0.8733 for scratch**. A patch-level bootstrap interval for their AUC difference is **[-0.0184, 0.0659]**, which includes zero. At full data, the seed-2 scratch model scores higher than its pretrained counterpart.
+**Attribution:** on 64 patches, randomly masking voxels reduced confidence more than masking the voxels ranked highest by any of the four methods. That result does not validate the maps' faithfulness. Zennit rule handling and the masking procedure need further controls.
 
-| Explanation check | Observation | Interpretation |
-|---|---|---|
-| Mean-masking deletion, 64 patches | Random deletion lowers confidence faster than all four attribution methods | This protocol does not support a positive faithfulness claim |
-| Noise stability, first 16 patches | Grad-CAM correlation 0.924 | Smoothness and stability do not establish faithfulness |
-| Zennit composites | Finite maps, but no architecture-specific conservation validation | Treat these as exploratory attribution implementations |
-| Entropy versus AOPC, 64 patches | All four unadjusted p-values >0.05 | No clear association established in this sample |
+**Uncertainty:** repeated predictions with dropout in the classification head were compared with attribution behaviour. The 64-case analysis did not establish a clear relationship between uncertainty and the perturbation-based explanation scores.
 
-[All individual runs, calibration results and limitations](docs/results.md) include results that do not favour pretraining.
+Lower-budget scores and full-data scratch seed 1 remain **record-based** because those checkpoints were unavailable for re-evaluation. [All individual runs, comparison plots and calibration results](docs/results.md) · [Record reconciliation and verification scope](docs/verification.md).
 
 ## Try it
 
-Preview the included volumes on a CPU, without downloading weights or the full dataset:
+Inspect the bundled inputs and render the saved attribution maps on a CPU:
 
 ```bash
 git clone https://github.com/Joana-Mansa/ct-fm-lrp-uncertainty.git
@@ -86,27 +91,17 @@ python -m venv .venv
 source .venv/bin/activate
 pip install numpy matplotlib
 python scripts/preview_data.py
+python scripts/attribution_figures.py
 ```
 
-Use the [reproduction guide](docs/reproduce.md) for checked seed-0 weights, single-case inference and checkpoint verification.
+These commands need no model or full-dataset download. For new predictions, use the [reproduction guide](docs/reproduce.md), which includes checked seed-0 weights and checkpoint verification.
 
-## Scope and limits
+## Scope and next validation needs
 
-- This is a small preprocessed patch benchmark, not whole-CT diagnosis or external clinical validation.
-- Patient/site identifiers are absent from the distributed arrays. Split independence and overlap with CT-FM pretraining data were not independently audited.
-- Three paired seeds are recorded at every budget. The full seed-1 scratch checkpoint is unavailable, and earlier server records differ from the completed GitHub records; [provenance and verification](docs/verification.md) explain the distinction.
-- Mean masking may introduce distribution shift; that explanation for the deletion results remains a hypothesis. LRP rule handling also needs architecture-specific validation.
-- MC dropout is applied to the classification head. Its uncertainty estimates do not establish clinical reliability.
+- This is a preprocessed patch benchmark; external cohorts, whole-CT diagnosis and clinical evaluation are not covered.
+- The distributed arrays lack patient/site identifiers. Patient-level split independence and overlap with CT-FM pretraining data were not independently audited.
+- The attribution and head-dropout uncertainty outputs remain exploratory. Anatomical plausibility, relevance conservation and clinical reliability need further validation.
 
-## Read further
+[Technical report](paper/ctfm_lrp_uncertainty.pdf) (not peer reviewed) · [Detailed methods](docs/methods.md) · [Source code](src/)
 
-| Resource | What it contains |
-|---|---|
-| [Architecture and losses](docs/architecture.md) | Layer shapes, training objectives and learning curves |
-| [Methods](docs/methods.md) | Architecture, matched comparisons, masking and uncertainty definitions |
-| [Full results](docs/results.md) | Per-seed performance, attribution and ensemble results |
-| [Verification record](docs/verification.md) | Six checkpoint evaluations, saved-array checks and remaining gaps |
-| [Technical report](paper/ctfm_lrp_uncertainty.pdf) | Self-contained research report, not a peer-reviewed publication |
-| [Source code](src/) | Training, inference and analysis scripts |
-
-Data: [MedMNIST v2](https://medmnist.com/), CC BY 4.0. Foundation model: [Pai et al., CT-FM](https://arxiv.org/abs/2501.09001), [official weights](https://huggingface.co/project-lighter/ct_fm_feature_extractor), Apache 2.0. Attribution library: [Zennit](https://github.com/chr5tphr/zennit).
+**Credits:** [MedMNIST v2](https://medmnist.com/), CC BY 4.0; [Pai et al., CT-FM](https://arxiv.org/abs/2501.09001), [official weights](https://huggingface.co/project-lighter/ct_fm_feature_extractor), Apache 2.0; [Zennit](https://github.com/chr5tphr/zennit).
