@@ -1,0 +1,62 @@
+{
+  "epochs": 2,
+  "lr": 0.0001,
+  "seed": 0,
+  "minutes": 1.367212971051534,
+  "runs": [
+    {
+      "n_train": 116,
+      "val_auc": 0.686604723190089,
+      "test": {
+        "accuracy": 0.7935483870967742,
+        "balanced_accuracy": 0.5,
+        "auc": 0.664380081300813
+      },
+      "history": [
+        {
+          "epoch": 1,
+          "loss": 0.6892111445295399,
+          "accuracy": 0.7454545454545455,
+          "balanced_accuracy": 0.5,
+          "auc": 0.5154858691444058
+        },
+        {
+          "epoch": 2,
+          "loss": 0.6793959510737452,
+          "accuracy": 0.7454545454545455,
+          "balanced_accuracy": 0.5,
+          "auc": 0.686604723190089
+        }
+      ],
+      "fraction": 0.1,
+      "pretrained": true
+    },
+    {
+      "n_train": 116,
+      "val_auc": 0.667440960123887,
+      "test": {
+        "accuracy": 0.6935483870967742,
+        "balanced_accuracy": 0.6624110772357723,
+        "auc": 0.6969639227642277
+      },
+      "history": [
+        {
+          "epoch": 1,
+          "loss": 0.7306980593451138,
+          "accuracy": 0.7454545454545455,
+          "balanced_accuracy": 0.5,
+          "auc": 0.6600851722802943
+        },
+        {
+          "epoch": 2,
+          "loss": 0.6049546907688009,
+          "accuracy": 0.6909090909090909,
+          "balanced_accuracy": 0.6358885017421603,
+          "auc": 0.667440960123887
+        }
+      ],
+      "fraction": 0.1,
+      "pretrained": false
+    }
+  ]
+}
