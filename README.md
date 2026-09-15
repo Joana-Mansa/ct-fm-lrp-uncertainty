@@ -4,7 +4,7 @@ This project studies whether **CT-FM, an existing model pretrained on CT scans, 
 
 **Main finding:** pretraining gives small, variable average gains in the recorded experiments. The attribution maps are useful to inspect, but their faithfulness has not been established.
 
-[Attribution gallery](docs/attribution.md) · [Architecture and losses](docs/architecture.md) · [Full results](docs/results.md) · [Run it](docs/reproduce.md) · [Verification](docs/verification.md)
+[Architecture and losses](docs/architecture.md) · [Full results](docs/results.md) · [Attribution gallery](docs/attribution.md) · [Run it](docs/reproduce.md) · [Verification](docs/verification.md)
 
 ## Data and task
 
@@ -18,24 +18,12 @@ This project studies whether **CT-FM, an existing model pretrained on CT scans, 
 
 CT-FM pretraining belongs to **Pai et al.** This project adapts their encoder to the nodule task. [Data provenance and label definitions](docs/data.md).
 
-## Attribution maps: Grad-CAM and Zennit LRP
-
-An attribution map assigns values to parts of the input to help inspect a model's prediction. **Grad-CAM** uses gradients and deep feature maps; **Zennit** supplies the three layer-wise relevance propagation (LRP) composites compared here.
-
-![Real CT inputs beside Grad-CAM and three Zennit LRP maps, with test IDs, labels and predictions](docs/figures/attribution_preview.png)
-
-**Read left to right:** CT input, Grad-CAM, EpsilonPlusFlat, EpsilonGammaBox and EpsilonAlpha2Beta1. These are saved outputs for test cases **257 and 180**, the first two cases of the original analysis subset. Each row shows the same slice and explains the predicted class. Label 0 means lower malignancy ratings; label 1 means higher ratings.
-
-**Colours are relative:** brighter means higher within that normalised map. Each map was scaled separately, so colours cannot compare absolute importance across methods or distinguish positive from negative evidence. These are exploratory explanations, not segmentation masks.
-
-[Four-case gallery, a misclassified example and interpretation guide](docs/attribution.md) · [Saved maps](results/qualitative.npz) · [Verified case identities](results/attribution_examples.json)
-
 <details>
-<summary>Inspect additional real input volumes in three views</summary>
+<summary>Inspect real input volumes in three views</summary>
 
 ![Real test patches 0 and 7, displayed along three array axes](docs/figures/data_samples.png)
 
-These are the bundled input examples, separate from the attribution cases above. [Download and inspect the sample volumes](examples/README.md).
+These are the bundled input examples, separate from the attribution cases in the results section. [Download and inspect the sample volumes](examples/README.md).
 
 </details>
 
@@ -47,7 +35,7 @@ The encoder converts the patch into **512 learned features**. Normalisation, dro
 
 Both encoder and head are trained. The pretrained and scratch arms use the same architecture and label subset. Attribution and uncertainty analyses happen after training. [Layer-by-layer details](docs/architecture.md).
 
-## Training objective and learning curves
+## Training objective
 
 | Setting | Implementation |
 |---|---|
@@ -58,11 +46,21 @@ Both encoder and head are trained. The pretrained and scratch arms use the same 
 
 **ROC AUC measures how well the model ranks the two classes across decision thresholds.** Cross-entropy trains the model; validation AUC selects the saved checkpoint.
 
+## Evaluation
+
+An attribution map assigns values to parts of the input to help inspect a model's prediction. **Grad-CAM** uses gradients and deep feature maps; **Zennit** supplies the three layer-wise relevance propagation (LRP) composites compared here.
+
+Evaluation compares classification ROC AUC on the test set, attribution behaviour under voxel masking, and prediction uncertainty from repeated dropout passes. These checks use fixed model weights. [Evaluation methods](docs/methods.md).
+
+## Results and what they mean
+
+### Learning curves
+
 ![Seed-0 full-data training losses and validation AUC for pretrained and scratch models](docs/figures/learning_curves.svg)
 
 These curves come from the **seed-0, full-data** logs. Dots mark the selected checkpoints: epoch 11 for CT-FM and epoch 6 for scratch. Training loss keeps falling while validation performance fluctuates. [Loss equation and curve interpretation](docs/architecture.md).
 
-## Results and what they mean
+### Classification performance
 
 Mean test ROC AUC over **three matched seeds in the completed experiment records**:
 
@@ -74,11 +72,29 @@ Mean test ROC AUC over **three matched seeds in the completed experiment records
 
 **Classification:** re-evaluating the full-data seed-0 checkpoints gives **0.8951 AUC for CT-FM** and **0.8733 for scratch**. The 95% patch-bootstrap interval for their difference is **[-0.0184, 0.0659]**, which includes zero. Some individual runs favour scratch.
 
+Lower-budget scores and full-data scratch seed 1 remain **record-based** because those checkpoints were unavailable for re-evaluation. [All individual runs, comparison plots and calibration results](docs/results.md) · [Record reconciliation and verification scope](docs/verification.md).
+
+### Attribution maps: Grad-CAM and Zennit LRP
+
+![Real CT inputs beside Grad-CAM and three Zennit LRP maps, with test IDs, labels and predictions](docs/figures/attribution_preview.png)
+
+**Read left to right:** CT input, Grad-CAM, EpsilonPlusFlat, EpsilonGammaBox and EpsilonAlpha2Beta1. These are saved outputs for test cases **257 and 180**, the first two cases of the original analysis subset. Each row shows the same slice and explains the predicted class. Label 0 means lower malignancy ratings; label 1 means higher ratings.
+
+**Colours are relative:** brighter means higher within that normalised map. Each map was scaled separately, so colours cannot compare absolute importance across methods or distinguish positive from negative evidence. These are exploratory explanations, not segmentation masks.
+
+[Four-case gallery, a misclassified example and interpretation guide](docs/attribution.md) · [Saved maps](results/qualitative.npz) · [Verified case identities](results/attribution_examples.json)
+
 **Attribution:** on 64 patches, randomly masking voxels reduced confidence more than masking the voxels ranked highest by any of the four methods. That result does not validate the maps' faithfulness. Zennit rule handling and the masking procedure need further controls.
+
+### Uncertainty
 
 **Uncertainty:** repeated predictions with dropout in the classification head were compared with attribution behaviour. The 64-case analysis did not establish a clear relationship between uncertainty and the perturbation-based explanation scores.
 
-Lower-budget scores and full-data scratch seed 1 remain **record-based** because those checkpoints were unavailable for re-evaluation. [All individual runs, comparison plots and calibration results](docs/results.md) · [Record reconciliation and verification scope](docs/verification.md).
+## Scope and next validation needs
+
+- This is a preprocessed patch benchmark; external cohorts, whole-CT diagnosis and clinical evaluation are not covered.
+- The distributed arrays lack patient/site identifiers. Patient-level split independence and overlap with CT-FM pretraining data were not independently audited.
+- The attribution and head-dropout uncertainty outputs remain exploratory. Anatomical plausibility, relevance conservation and clinical reliability need further validation.
 
 ## Try it
 
@@ -95,12 +111,6 @@ python scripts/attribution_figures.py
 ```
 
 These commands need no model or full-dataset download. For new predictions, use the [reproduction guide](docs/reproduce.md), which includes checked seed-0 weights and checkpoint verification.
-
-## Scope and next validation needs
-
-- This is a preprocessed patch benchmark; external cohorts, whole-CT diagnosis and clinical evaluation are not covered.
-- The distributed arrays lack patient/site identifiers. Patient-level split independence and overlap with CT-FM pretraining data were not independently audited.
-- The attribution and head-dropout uncertainty outputs remain exploratory. Anatomical plausibility, relevance conservation and clinical reliability need further validation.
 
 [Technical report](paper/ctfm_lrp_uncertainty.pdf) (not peer reviewed) · [Detailed methods](docs/methods.md) · [Source code](src/)
 
