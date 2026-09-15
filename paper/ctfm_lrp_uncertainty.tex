@@ -97,7 +97,7 @@ We use the $64^3$ release. This is not cosmetic: CT-FM downsamples by a factor
 of 16, so a $28^3$ volume is not divisible by the network stride and raises an
 error.
 
-\subsection{Model and three silent failure modes}
+\subsection{Model and implementation notes}
 
 CT-FM's encoder produces a five-level feature pyramid; we take the bottleneck at
 512 channels and $4^3$ resolution, apply global average pooling, LayerNorm and a
@@ -152,7 +152,7 @@ predictive entropy and mutual information, plus expected calibration error.
 
 \section{Results}
 
-\subsection{Self-supervised pretraining helps, with one caveat}
+\subsection{Label-efficiency ablation}
 
 \begin{table}[t]
 \caption{Label-efficiency ablation, test AUC (seed 0)}
@@ -192,7 +192,7 @@ entropy 0.085: the model is confident and less accurate than its confidence
 implies, the usual direction for a small fine-tuned network on an imbalanced
 task.
 
-\subsection{No attribution method beats random deletion}
+\subsection{Faithfulness against a random baseline}
 
 \begin{table}[t]
 \caption{Faithfulness and stability, 64 test volumes}
@@ -236,7 +236,7 @@ as inpainting the removed region is required before the protocol can be used for
 ranking. Insertion also fails to separate the methods, with all four recovering
 to 0.972--0.974.
 
-\subsection{Stability separates what deletion cannot}
+\subsection{Perturbation stability}
 
 Under perturbation the methods diverge. Grad-CAM maps are nearly invariant
 (0.924) while the LRP composites give 0.012, $-0.015$ and 0.220. Grad-CAM is
@@ -251,7 +251,7 @@ preferable.
 \label{fig:panel}
 \end{figure}
 
-\subsection{Deep ensemble against MC dropout}
+\subsection{Deep ensemble and MC dropout}
 
 Each full-label run stores a tagged checkpoint, so the seed replicates used for
 Section~III-A also serve as ensemble members. Four independently trained models
@@ -289,7 +289,7 @@ reported uncertainty to ambiguity in the data. Under the ensemble it accounts
 for 53.0\%, indicating disagreement between independently trained models that
 dropout sampling on a single parameter set does not expose.
 
-\subsection{Uncertainty against faithfulness}
+\subsection{Uncertainty and attribution faithfulness}
 
 \begin{figure}[t]
 \centerline{\includegraphics[width=\columnwidth]{../docs/figures/uncertainty_vs_faithfulness.png}}
