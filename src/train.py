@@ -111,7 +111,8 @@ def run_one(pretrained, fraction, args, dev, tag):
 
     if fraction == 1.0:
         WEIGHTS.mkdir(exist_ok=True)
-        name = "ctfm_pretrained.pt" if pretrained else "ctfm_scratch.pt"
+        stem = "ctfm_pretrained" if pretrained else "ctfm_scratch"
+        name = f"{stem}{args.tag}.pt"
         torch.save({"state_dict": best_state, "pretrained": pretrained}, WEIGHTS / name)
 
     return {"n_train": len(train.dataset), "val_auc": best_auc,
@@ -126,6 +127,8 @@ def main():
     ap.add_argument("--head-lr", type=float, default=1e-3)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--fractions", type=float, nargs="+", default=[0.1, 0.25, 1.0])
+    ap.add_argument("--tag", default="", help="suffix for weight and result files")
+    ap.add_argument("--arms", default="both", choices=["both", "pretrained", "scratch"])
     args = ap.parse_args()
 
     dev = "cuda" if torch.cuda.is_available() else "cpu"
@@ -133,13 +136,15 @@ def main():
 
     out, start = [], time.time()
     for fraction in args.fractions:
-        for pretrained in (True, False):
+        arms = {"both": (True, False), "pretrained": (True,),
+                "scratch": (False,)}[args.arms]
+        for pretrained in arms:
             tag = f"{'ctfm' if pretrained else 'scratch'} {int(fraction * 100)}%"
             print(f"=== {tag} ===", flush=True)
             r = run_one(pretrained, fraction, args, dev, tag)
             r.update({"fraction": fraction, "pretrained": pretrained})
             out.append(r)
-            (RESULTS / "ablation.json").write_text(json.dumps(
+            (RESULTS / f"ablation{args.tag}.json").write_text(json.dumps(
                 {"epochs": args.epochs, "encoder_lr": args.lr,
                  "head_lr": args.head_lr, "seed": args.seed,
                  "minutes": (time.time() - start) / 60, "runs": out}, indent=2))
