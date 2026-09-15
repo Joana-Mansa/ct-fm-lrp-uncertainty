@@ -74,7 +74,8 @@ def run_one(pretrained, fraction, args, dev, tag):
 
     torch.manual_seed(args.seed)
     model = NoduleClassifier(pretrained=pretrained).to(dev)
-    opt = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-4)
+    opt = torch.optim.AdamW(model.param_groups(args.lr, args.head_lr),
+                            weight_decay=1e-4)
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, args.epochs)
 
     # Class weights counter the benign majority.
@@ -121,7 +122,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--epochs", type=int, default=25)
     ap.add_argument("--batch-size", type=int, default=8)
-    ap.add_argument("--lr", type=float, default=1e-4)
+    ap.add_argument("--lr", type=float, default=1e-5, help="encoder lr")
+    ap.add_argument("--head-lr", type=float, default=1e-3)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--fractions", type=float, nargs="+", default=[0.1, 0.25, 1.0])
     args = ap.parse_args()
@@ -138,7 +140,8 @@ def main():
             r.update({"fraction": fraction, "pretrained": pretrained})
             out.append(r)
             (RESULTS / "ablation.json").write_text(json.dumps(
-                {"epochs": args.epochs, "lr": args.lr, "seed": args.seed,
+                {"epochs": args.epochs, "encoder_lr": args.lr,
+                 "head_lr": args.head_lr, "seed": args.seed,
                  "minutes": (time.time() - start) / 60, "runs": out}, indent=2))
 
     print(f"done in {(time.time() - start) / 60:.1f} min")
